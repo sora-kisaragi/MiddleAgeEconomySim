@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
+
+# コンパイラの明示的な設定（GCCを強制）
+set(CMAKE_C_COMPILER "gcc-14")
+set(CMAKE_CXX_COMPILER "g++-14")
+
 project(MiddleAgeEconomySim VERSION 0.1.0 LANGUAGES CXX)
 
 # C++17を指定
@@ -32,14 +37,15 @@ include(CPack)
 
 # コードカバレッジの設定（ローカルのみ）
 option(CODE_COVERAGE "Enable coverage reporting" OFF)
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  # カバレッジフラグの追加
-  add_compile_options(--coverage -O0)
-  add_link_options(--coverage)
-  
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # カバレッジレポート生成用のターゲット
   find_program(LCOV lcov REQUIRED)
   find_program(GENHTML genhtml REQUIRED)
+  
+  # 実行ファイルとテストにカバレッジフラグを追加
+  target_compile_options(${PROJECT_NAME} PRIVATE --coverage -O0)
+  target_link_options(${PROJECT_NAME} PRIVATE --coverage)
+  
   
   add_custom_target(coverage
     # カバレッジデータの収集
