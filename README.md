@@ -15,6 +15,9 @@
   - [テスト駆動開発（TDD）](#テスト駆動開発tdd)
   - [プロジェクト構成](#プロジェクト構成)
   - [コンパイル手順](#コンパイル手順)
+  - [テスト実行とコードカバレッジの確認](#テスト実行とコードカバレッジの確認)
+    - [テストの実行](#テストの実行)
+    - [コードカバレッジの確認](#コードカバレッジの確認)
   - [使用ライブラリ](#使用ライブラリ)
   - [実行方法](#実行方法)
   - [性能と拡張性](#性能と拡張性)
@@ -158,6 +161,46 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
    ```bash
    make
    ```
+
+---
+
+## テスト実行とコードカバレッジの確認
+
+### テストの実行
+
+ビルド後、以下のコマンドでテストを実行できます。
+
+```bash
+cd build
+ctest --output-on-failure
+```
+
+### コードカバレッジの確認
+コードカバレッジを確認するには、以下の手順に従ってください。
+
+1. **カバレッジオプションを有効にしてビルド**
+    ```bash
+    mkdir -p build && cd build
+    cmake -DCODE_COVERAGE=ON ..
+    make
+    ```
+2. **テスト実行後、カバレッジレポートを生成**
+    ```bash
+    ctest
+    make coverage
+    ```
+3. **レポートの確認**
+  生成されたHTMLレポートをブラウザで開きます
+    ```bash
+    # macOS
+    open coverage/index.html
+    # Linux
+    xdg-open coverage/index.html
+    # Windows
+    start coverage\index.html
+    ```
+
+詳細なテスト方法については、[テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)を参照してください。
 
 ---
 
