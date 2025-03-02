@@ -1,0 +1,50 @@
+name: Sync Main Changes to Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "wiki/**"  # wikiフォルダ内の変更のみを対象
+  workflow_dispatch:
+    # 手動実行用
+
+jobs:
+  sync-main-to-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Main Repository
+        uses: actions/checkout@v4
+        with:
+          path: main-repo
+          
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+          token: ${{ secrets.WIKI_ACCESS_TOKEN }}  # Wikiへの書き込み権限が必要
+          
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          
+      - name: Sync Main to Wiki
+        run: |
+          # メインリポジトリのwikiフォルダからWikiリポジトリへコピー
+          cp -r main-repo/wiki/*.md wiki-repo/ || true
+          
+          cd wiki-repo
+          git add .
+          
+          # 変更があるか確認
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git commit -m "Auto-sync Main repo changes to Wiki [skip ci]"
+          git push
