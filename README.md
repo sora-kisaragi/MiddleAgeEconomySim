@@ -15,11 +15,13 @@
   - [テスト駆動開発（TDD）](#テスト駆動開発tdd)
   - [プロジェクト構成](#プロジェクト構成)
   - [コンパイル手順](#コンパイル手順)
+  - [テスト実行とコードカバレッジの確認](#テスト実行とコードカバレッジの確認)
+    - [テストの実行](#テストの実行)
+    - [コードカバレッジの確認](#コードカバレッジの確認)
   - [使用ライブラリ](#使用ライブラリ)
   - [実行方法](#実行方法)
   - [性能と拡張性](#性能と拡張性)
   - [ドキュメント](#ドキュメント)
-  - [ドキュメントについて](#ドキュメントについて)
   - [ライセンス](#ライセンス)
 
 ---
@@ -70,7 +72,7 @@
 - エージェントの状態（健康、犯罪傾向など）の管理
 - 貨幣経済シミュレーションの基本的なフロー構築
 
-> 注: フェーズ1では開発速度を優先し、構造体（struct）ベースの実装を行います。
+> 注: フェーズ1では開発速度を優先し、構造体（struct）ベースの実装を行います。  
 > フェーズ2以降で段階的にクラスベースの実装へ移行する予定です。
 >
 > **開発手法**: このプロジェクトはテスト駆動開発（TDD）を採用し、機能実装の前に
@@ -101,27 +103,29 @@ TDDを採用することで、以下のメリットを得られます：
 ## プロジェクト構成
 
 
-    /MiddleAgeEconomySim
-    │
-    ├── CMakeLists.txt           # CMakeの設定ファイル
-    ├── src/                    # ソースコード
-    │   ├── main.cpp             # メインエントリーポイント
-    │   ├── economy_simulator.cpp # 経済シミュレーター本体
-    │   └── ...                 # その他のソースコード
-    │
-    ├── include/                 # ヘッダーファイル
-    │   ├── person.h             # 人物クラス
-    │   ├── business.h           # 企業クラス
-    │   └── ...                 # その他のヘッダーファイル
-    │
-    ├── wiki/                    # Wiki用ページ（要件定義書・設計書など）
-    │   ├── Requirement.md       # 要件定義書
-    │   ├── High_Level_Design.md # 基本設計書
-    │   ├── Low_Level_Design.md  # 詳細設計書
-    │   └── ...                 # その他のWikiドキュメント
-    │
-    └── README.md                # プロジェクトの説明
+    MiddleAgeEconomySim/
+    ├── .github/               # GitHub関連ファイル
+    │   ├── ISSUE_TEMPLATE/    # Issueテンプレート
+    │   └── workflows/         # GitHub Actions設定
+    ├── src/                   # ソースコード
+    │   └── main.cpp           # メインファイル
+    ├── include/               # ヘッダーファイル
+    │   ├── agent/             # エージェント関連ヘッダ
+    │   ├── market/            # 市場関連ヘッダ
+    │   └── system/            # システム関連ヘッダ
+    ├── tests/                 # テストコード
+    │   ├── agent_tests/       # エージェントのテスト
+    │   └── market_tests/      # 市場のテスト
+    ├── data/                  # 設定・データファイル
+    ├── docs/                  # ドキュメント
+    ├── wiki/                  # Wiki関連ファイル（既存）
+    ├── .gitignore             # Git無視設定
+    ├── CMakeLists.txt         # CMake設定ファイル
+    ├── README.md              # プロジェクト説明
+    └── LICENSE                # ライセンス情報
 
+> 注: 空のディレクトリはGitで追跡されないため、各ディレクトリには`.gitkeep`ファイルを
+> 配置しています。これによりディレクトリ構造がリポジトリで維持されます。
 
 **`/wiki/`** フォルダには要件定義書や設計書をGitHub Wikiとして格納します。  
 これにより、システムの進行に伴って適宜内容を更新・補足できます。
@@ -160,6 +164,46 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
 
 ---
 
+## テスト実行とコードカバレッジの確認
+
+### テストの実行
+
+ビルド後、以下のコマンドでテストを実行できます。
+
+```bash
+cd build
+ctest --output-on-failure
+```
+
+### コードカバレッジの確認
+コードカバレッジを確認するには、以下の手順に従ってください。
+
+1. **カバレッジオプションを有効にしてビルド**
+    ```bash
+    mkdir -p build && cd build
+    cmake -DCODE_COVERAGE=ON ..
+    make
+    ```
+2. **テスト実行後、カバレッジレポートを生成**
+    ```bash
+    ctest
+    make coverage
+    ```
+3. **レポートの確認**
+  生成されたHTMLレポートをブラウザで開きます
+    ```bash
+    # macOS
+    open coverage/index.html
+    # Linux
+    xdg-open coverage/index.html
+    # Windows
+    start coverage\index.html
+    ```
+
+詳細なテスト方法については、[テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)を参照してください。
+
+---
+
 ## 使用ライブラリ
 
 このプロジェクトでは、特定の外部ライブラリを使用していませんが、必要に応じて後で追加する可能性があります。
@@ -189,24 +233,16 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
 
 ## ドキュメント
 
-- [要件定義書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Requirement.md)
-- [基本設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/High_Level_Design.md)
-- [詳細設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Low_Level_Design.md)
-- [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch-Strategy.md)
-- [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding-Standards.md)
-- [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing-Guidelines.md)
-
----
-
-## ドキュメントについて
-
-開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。
-どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも
+開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。  
+どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも  
 ドキュメントを編集できます。
 
-主なドキュメント:
-- [基本設計書(HLD)](wiki/High_Level_Design.md)
-- [詳細設計書(LLD)](wiki/Low_Level_Design.md)
+- [要件定義書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Requirement)
+- [基本設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/High_Level_Design)
+- [詳細設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Low_Level_Design)
+- [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch%E2%80%90Strategy)
+- [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding%E2%80%90Standards)
+- [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)
 
 ---
 

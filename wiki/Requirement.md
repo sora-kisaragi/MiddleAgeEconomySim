@@ -137,6 +137,32 @@ struct TradeRoute {
 ---
 
 ## **6. フェーズごとの開発計画**
+
+```mermaid
+gantt
+    title 開発フェーズとマイルストーン
+    dateFormat  YYYY-MM
+    axisFormat %m月
+    
+    section フェーズ1
+    村レベル経済シミュレーション    :a1, 2025-03, 3M
+    基本データ構造(struct)         :a2, after a1, 1M
+    市場機能実装                   :a3, after a2, 2M
+    価格変動アルゴリズム           :a4, after a3, 1M
+    
+    section フェーズ2
+    都市・国家レベル拡張          :b1, after a4, 3M
+    クラスへの移行                :b2, after b1, 1M
+    物流・人流システム            :b3, after b2, 2M
+    経済イベント実装              :b4, after b3, 1M
+    
+    section フェーズ3
+    可視化と最適化               :c1, after b4, 2M
+    UI開発                      :c2, after c1, 1M
+    パフォーマンス最適化         :c3, after c2, 1M
+    拡張機能追加                 :c4, after c3, 2M
+```
+
 ### **6.1 フェーズ1（村レベルの経済シミュレーション）**
 - **目標:** 100人規模の村の経済を再現
 - **実装内容:**
