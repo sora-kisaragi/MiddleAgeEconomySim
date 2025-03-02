@@ -101,26 +101,26 @@ TDDを採用することで、以下のメリットを得られます：
 ## プロジェクト構成
 
 
-    /MiddleAgeEconomySim
-    │
-    ├── CMakeLists.txt           # CMakeの設定ファイル
-    ├── src/                    # ソースコード
-    │   ├── main.cpp             # メインエントリーポイント
-    │   ├── economy_simulator.cpp # 経済シミュレーター本体
-    │   └── ...                 # その他のソースコード
-    │
-    ├── include/                 # ヘッダーファイル
-    │   ├── person.h             # 人物クラス
-    │   ├── business.h           # 企業クラス
-    │   └── ...                 # その他のヘッダーファイル
-    │
-    ├── wiki/                    # Wiki用ページ（要件定義書・設計書など）
-    │   ├── Requirement.md       # 要件定義書
-    │   ├── High_Level_Design.md # 基本設計書
-    │   ├── Low_Level_Design.md  # 詳細設計書
-    │   └── ...                 # その他のWikiドキュメント
-    │
-    └── README.md                # プロジェクトの説明
+    MiddleAgeEconomySim/
+    ├── .github/               # GitHub関連ファイル
+    │   ├── ISSUE_TEMPLATE/    # Issueテンプレート
+    │   └── workflows/         # GitHub Actions設定
+    ├── src/                   # ソースコード
+    │   └── main.cpp           # メインファイル
+    ├── include/               # ヘッダーファイル
+    │   ├── agent/             # エージェント関連ヘッダ
+    │   ├── market/            # 市場関連ヘッダ
+    │   └── system/            # システム関連ヘッダ
+    ├── tests/                 # テストコード
+    │   ├── agent_tests/       # エージェントのテスト
+    │   └── market_tests/      # 市場のテスト
+    ├── data/                  # 設定・データファイル
+    ├── docs/                  # ドキュメント
+    ├── wiki/                  # Wiki関連ファイル（既存）
+    ├── .gitignore             # Git無視設定
+    ├── CMakeLists.txt         # CMake設定ファイル
+    ├── README.md              # プロジェクト説明
+    └── LICENSE                # ライセンス情報
 
 
 **`/wiki/`** フォルダには要件定義書や設計書をGitHub Wikiとして格納します。  
