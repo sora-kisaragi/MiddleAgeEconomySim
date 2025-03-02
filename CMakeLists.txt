@@ -29,3 +29,28 @@ add_subdirectory(tests)
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
+
+# コードカバレッジの設定（ローカルのみ）
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  # カバレッジフラグの追加
+  add_compile_options(--coverage -O0)
+  add_link_options(--coverage)
+  
+  # カバレッジレポート生成用のターゲット
+  find_program(LCOV lcov REQUIRED)
+  find_program(GENHTML genhtml REQUIRED)
+  
+  add_custom_target(coverage
+    # カバレッジデータの収集
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
+    COMMAND ${LCOV} --directory . --capture --output-file coverage.info
+    # 不要なファイルの除外
+    COMMAND ${LCOV} --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' --output-file coverage.info
+    # HTMLレポートの生成
+    COMMAND ${GENHTML} --output-directory coverage coverage.info
+    COMMAND ${CMAKE_COMMAND} -E echo "Coverage report generated: file://${CMAKE_BINARY_DIR}/coverage/index.html"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Generating code coverage report"
+  )
+endif()

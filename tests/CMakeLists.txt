@@ -36,3 +36,13 @@ endif()
 # テストを登録
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+# テスト対象のソースを含める（ただしmain.cppは除外）
+file(GLOB_RECURSE PROJECT_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
+
+# プロジェクトソースをテストに含める
+target_sources(unit_tests PRIVATE ${PROJECT_SOURCES})
+
+# インクルードディレクトリを追加
+target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
