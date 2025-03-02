@@ -1,30 +1,47 @@
-# **1. プロジェクト概要**
-    **中世近代ファンタジー 貨幣経済シミュレーション**は、個々のエージェント（NPC、企業、政府、金貸しなど）が相互に作用し、経済の流れをシミュレートするプロジェクトです。
+# 中世近代貨幣経済シミュレーション Wiki
 
-# **2. 主要なWikiページのリンク**
-     - **[[High Level Design](https://chatgpt.com/c/High_Level_Design.md)](./High_Level_Design.md)** - システム全体の概要  
-     - **[[Low Level Design](https://chatgpt.com/c/Low_Level_Design.md)](./Low_Level_Design.md)** - 詳細設計  
-     - **[[開発フロー](https://chatgpt.com/c/Development_Workflow.md)](./Development_Workflow.md)** - ブランチ戦略やプルリク手順  
-     - **[[API仕様](https://chatgpt.com/c/API_Specifications.md)](./API_Specifications.md)** - APIのエンドポイント一覧  
-     - **[[FAQ](https://chatgpt.com/c/FAQ.md)](./FAQ.md)** - よくある質問  
+## プロジェクト概要
 
-#### **3. 開発環境のセットアップ**
+**中世近代貨幣経済シミュレーション**は、個々のエージェント（NPC、企業、政府、金貸しなど）が相互に作用し、経済の流れをシミュレートするプロジェクトです。このシステムでは、仮想のエージェントを通じて経済活動を体験し、交易や財産管理、エージェントの行動がどのように相互作用するかを観察できます。
 
-     ```bash
-     git clone https://github.com/your-repo.git
-     cd your-repo
-     ./setup.sh
-     ```
+## 主要なWikiページ
 
-#### **4. [コントリビューションガイド](https://chatgpt.com/c/CONTRIBUTING.md)**
-   - 貢献したい人向けに **CONTRIBUTING.md** へのリンクを追加  
-   - 例:  
-     > 開発への参加方法については[コントリビューションガイド](./CONTRIBUTING.md)をご確認ください。  
+### 設計文書
+- [要件定義書](./Requirement.md) - プロジェクトの基本要件と目的
+- [基本設計書](./High_Level_Design.md) - システム全体のアーキテクチャ
+- [詳細設計書](./Low_Level_Design.md) - モジュールと実装の詳細
 
-#### **5. 連絡先や外部リンク**
-   - Discord / Slack / GitHub Issues などの連絡手段  
-   - 例:  
-     - **開発ディスカッション**: [[Discord 招待リンク](https://discord.gg/xxx)](https://discord.gg/xxx)  
-     - **バグ報告**: [[GitHub Issues](https://github.com/your-repo/issues)](https://github.com/your-repo/issues)  
+### 開発ガイド
+- [コーディング規約](./Coding-Standards.md) - コードの書き方と規則
+- [ブランチ戦略](./Branch-Strategy.md) - Gitブランチの運用方法
+- [テスト規約](./Testing-Guidelines.md) - テスト手法とガイドライン
 
----
+## 開発環境のセットアップ
+
+```bash
+# リポジトリのクローン
+git clone https://github.com/sora-kisaragi/MiddleAgeEconomySim.git
+cd MiddleAgeEconomySim
+
+# ビルド環境の準備
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## コントリビューションガイド
+
+プロジェクトへの貢献を検討されている方は、コントリビューションガイドをご確認ください。
+
+テスト駆動開発（TDD）を採用しており、新機能の追加時には必ずテストを先に書くようにしてください。  
+詳細はテスト規約を参照してください。
+
+## フェーズ計画
+
+現在はフェーズ1の開発中で、以下の機能を実装しています
+
+エージェントの基本的な行動（農民、貴族など）
+エージェント間での取引システム
+エージェントの状態（健康、犯罪傾向など）の管理
+貨幣経済シミュレーションの基本的なフロー構築
