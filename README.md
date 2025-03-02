@@ -19,6 +19,7 @@
   - [実行方法](#実行方法)
   - [性能と拡張性](#性能と拡張性)
   - [ドキュメント](#ドキュメント)
+  - [ドキュメントについて](#ドキュメントについて)
   - [ライセンス](#ライセンス)
 
 ---
@@ -194,6 +195,18 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
 - [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch-Strategy.md)
 - [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding-Standards.md)
 - [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing-Guidelines.md)
+
+---
+
+## ドキュメントについて
+
+開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。
+どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも
+ドキュメントを編集できます。
+
+主なドキュメント:
+- [基本設計書(HLD)](wiki/High_Level_Design.md)
+- [詳細設計書(LLD)](wiki/Low_Level_Design.md)
 
 ---
 
