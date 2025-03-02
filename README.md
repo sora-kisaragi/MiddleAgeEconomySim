@@ -19,7 +19,6 @@
   - [実行方法](#実行方法)
   - [性能と拡張性](#性能と拡張性)
   - [ドキュメント](#ドキュメント)
-  - [ドキュメントについて](#ドキュメントについて)
   - [ライセンス](#ライセンス)
 
 ---
@@ -70,7 +69,7 @@
 - エージェントの状態（健康、犯罪傾向など）の管理
 - 貨幣経済シミュレーションの基本的なフロー構築
 
-> 注: フェーズ1では開発速度を優先し、構造体（struct）ベースの実装を行います。
+> 注: フェーズ1では開発速度を優先し、構造体（struct）ベースの実装を行います。  
 > フェーズ2以降で段階的にクラスベースの実装へ移行する予定です。
 >
 > **開発手法**: このプロジェクトはテスト駆動開発（TDD）を採用し、機能実装の前に
@@ -122,6 +121,8 @@ TDDを採用することで、以下のメリットを得られます：
     ├── README.md              # プロジェクト説明
     └── LICENSE                # ライセンス情報
 
+> 注: 空のディレクトリはGitで追跡されないため、各ディレクトリには`.gitkeep`ファイルを
+> 配置しています。これによりディレクトリ構造がリポジトリで維持されます。
 
 **`/wiki/`** フォルダには要件定義書や設計書をGitHub Wikiとして格納します。  
 これにより、システムの進行に伴って適宜内容を更新・補足できます。
@@ -189,24 +190,16 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
 
 ## ドキュメント
 
-- [要件定義書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Requirement.md)
-- [基本設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/High_Level_Design.md)
-- [詳細設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Low_Level_Design.md)
-- [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch-Strategy.md)
-- [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding-Standards.md)
-- [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing-Guidelines.md)
-
----
-
-## ドキュメントについて
-
-開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。
-どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも
+開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。  
+どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも  
 ドキュメントを編集できます。
 
-主なドキュメント:
-- [基本設計書(HLD)](wiki/High_Level_Design.md)
-- [詳細設計書(LLD)](wiki/Low_Level_Design.md)
+- [要件定義書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Requirement)
+- [基本設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/High_Level_Design)
+- [詳細設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Low_Level_Design)
+- [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch%E2%80%90Strategy)
+- [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding%E2%80%90Standards)
+- [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)
 
 ---
 
