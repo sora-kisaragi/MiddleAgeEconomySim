@@ -1,14 +1,11 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "agent.h"
 
-struct Person {
-    // 基本情報
-    int id;
-    std::string name;
-    int money;
-    
+struct Person : public Agent {
     // 職業と経済状態
+    std::string name;
     std::string job;
     int daily_income;
     int daily_expense;
@@ -26,9 +23,7 @@ struct Person {
     
     // デフォルトコンストラクタ
     Person() : 
-        id(0), 
         name(""), 
-        money(0), 
         job(""), 
         daily_income(0), 
         daily_expense(0), 
