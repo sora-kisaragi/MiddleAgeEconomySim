@@ -3,6 +3,20 @@
 #include <thread>
 #include <chrono>
 
+/*
+ * TODO: 実装予定のテストケース
+ * 1. トランザクション検証機能
+ *    - トランザクションIDの重複チェック
+ *    - 売り手と買い手の整合性チェック
+ *    - 金額と数量の整合性チェック
+ * 2. トランザクション履歴管理
+ *    - 履歴の保存と取得
+ *    - 履歴の検索機能
+ * 3. エッジケース
+ *    - 大量トランザクションの処理
+ *    - タイムスタンプの境界値
+ */
+
 // Transaction構造体の基本テスト
 TEST(TransactionTest, Creation) {
     Transaction transaction;
