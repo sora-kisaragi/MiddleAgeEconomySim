@@ -36,8 +36,16 @@ set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
 # コードカバレッジの設定（ローカルのみ）
-option(CODE_COVERAGE "Enable coverage reporting" OFF)
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+# Phase 1ではカバレッジ収集を行わない
+set(PHASE_1 TRUE)
+if(PHASE_1)
+  message(STATUS "Phase 1: Code coverage is disabled")
+  option(CODE_COVERAGE "Enable coverage reporting" OFF)
+else()
+  option(CODE_COVERAGE "Enable coverage reporting" OFF)
+endif()
+
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT PHASE_1)
   # カバレッジレポート生成用のターゲット
   find_program(LCOV lcov REQUIRED)
   find_program(GENHTML genhtml REQUIRED)
@@ -45,7 +53,6 @@ if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # 実行ファイルとテストにカバレッジフラグを追加
   target_compile_options(${PROJECT_NAME} PRIVATE --coverage -O0)
   target_link_options(${PROJECT_NAME} PRIVATE --coverage)
-  
   
   add_custom_target(coverage
     # カバレッジデータの収集

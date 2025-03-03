@@ -47,8 +47,8 @@ target_sources(unit_tests PRIVATE ${PROJECT_SOURCES})
 # インクルードディレクトリを追加
 target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
-# 親のCMakeListsでCODE_COVERAGEが有効な場合、テストにもカバレッジフラグを追加
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+# 親のCMakeListsでCODE_COVERAGEが有効かつPHASE_1でない場合、テストにもカバレッジフラグを追加
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT PHASE_1)
   target_compile_options(unit_tests PRIVATE --coverage -O0)
   target_link_options(unit_tests PRIVATE --coverage)
 endif()
