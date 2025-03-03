@@ -1,184 +1,163 @@
 #include <gtest/gtest.h>
-#include "agent/person.h"
+#include "../../include/agent/person.h"
 
-TEST(PersonTest, DefaultConstructor) {
-    Person p;
-    // 基本情報
-    EXPECT_EQ(0, p.id);
-    EXPECT_EQ("", p.name);
-    EXPECT_EQ(0, p.money);
+// Person構造体の基本テスト
+TEST(PersonTest, Creation) {
+    Person person;
     
-    // 職業と経済状態
-    EXPECT_EQ("", p.job);
-    EXPECT_EQ(0, p.daily_income);
-    EXPECT_EQ(0, p.daily_expense);
+    // Agent部分の初期化を確認
+    EXPECT_EQ(person.id, 0);
+    EXPECT_EQ(person.money, 0);
+    EXPECT_TRUE(person.history.empty());
     
-    // 所有物
-    EXPECT_TRUE(p.inventory.empty());
-    
-    // 状態属性
-    EXPECT_EQ(2, p.health_status);  // 健康
-    EXPECT_EQ(0, p.crime_tendency); // 犯罪傾向低
-    
-    // 行動決定要素
-    EXPECT_EQ(50, p.satisfaction);  // 中程度の満足度
-    EXPECT_EQ(50, p.risk_tolerance); // 中程度のリスク選好度
+    // Person固有のフィールドが正しく初期化されているか確認
+    EXPECT_EQ(person.name, "");
+    EXPECT_EQ(person.job, "");
+    EXPECT_EQ(person.daily_income, 0);
+    EXPECT_EQ(person.daily_expense, 0);
+    EXPECT_TRUE(person.inventory.empty());
+    EXPECT_EQ(person.health_status, HealthStatus::HEALTHY);
+    EXPECT_EQ(person.crime_tendency, CrimeTendency::LOW);
+    EXPECT_EQ(person.satisfaction, 50);
+    EXPECT_EQ(person.risk_tolerance, 50);
 }
 
-TEST(PersonTest, CustomPerson) {
-    Person p;
-    p.id = 1;
-    p.name = "John Smith";
-    p.money = 100;
-    p.job = "Farmer";
-    p.daily_income = 10;
-    p.daily_expense = 8;
-    p.inventory.push_back("Bread");
-    p.health_status = 1;  // 病気
-    p.crime_tendency = 1; // 中程度
-    p.satisfaction = 30;  // やや不満
-    p.risk_tolerance = 70; // リスク許容度高め
+// Personの情報設定テスト
+TEST(PersonTest, SetPersonInfo) {
+    Person person;
     
-    EXPECT_EQ(1, p.id);
-    EXPECT_EQ("John Smith", p.name);
-    EXPECT_EQ(100, p.money);
-    EXPECT_EQ("Farmer", p.job);
-    EXPECT_EQ(10, p.daily_income);
-    EXPECT_EQ(8, p.daily_expense);
-    EXPECT_EQ(1, p.inventory.size());
-    EXPECT_EQ("Bread", p.inventory[0]);
-    EXPECT_EQ(1, p.health_status);
-    EXPECT_EQ(1, p.crime_tendency);
-    EXPECT_EQ(30, p.satisfaction);
-    EXPECT_EQ(70, p.risk_tolerance);
+    // 個人情報を設定
+    person.id = 101;
+    person.name = "John Doe";
+    person.job = "Farmer";
+    person.money = 500;
+    
+    EXPECT_EQ(person.id, 101);
+    EXPECT_EQ(person.name, "John Doe");
+    EXPECT_EQ(person.job, "Farmer");
+    EXPECT_EQ(person.money, 500);
 }
 
-// 満足度の更新をテスト
-TEST(PersonTest, SatisfactionUpdate) {
-    Person p;
-    p.satisfaction = 50; // 初期満足度を50に設定
+// 経済活動の設定テスト
+TEST(PersonTest, EconomicActivity) {
+    Person person;
     
-    // アイテム所持時の満足度上昇テスト
-    p.inventory.push_back("小麦");
-    int initialSatisfaction = p.satisfaction;
-    int updatedSatisfaction = std::min(100, initialSatisfaction + 5);
-    EXPECT_EQ(updatedSatisfaction, std::min(100, p.satisfaction + 5));
+    // 経済活動パラメータを設定
+    person.setDailyIncome(50);
+    person.setDailyExpense(30);
+    person.setSatisfaction(60);
+    person.setRiskTolerance(40);
     
-    // 満足度の最大値（100）を超えないことを確認
-    p.satisfaction = 98;
-    p.inventory.push_back("パン");
-    EXPECT_LE(p.satisfaction + 5, 100);
+    EXPECT_EQ(person.daily_income, 50);
+    EXPECT_EQ(person.daily_expense, 30);
+    EXPECT_EQ(person.satisfaction, 60);
+    EXPECT_EQ(person.risk_tolerance, 40);
     
-    // アイテムがない場合の満足度低下テスト
-    p.satisfaction = 50;
-    p.inventory.clear();
-    int decreasedSatisfaction = std::max(0, p.satisfaction - 10);
-    EXPECT_EQ(decreasedSatisfaction, std::max(0, p.satisfaction - 10));
-    
-    // 満足度が0未満にならないことを確認
-    p.satisfaction = 5;
-    p.inventory.clear();
-    EXPECT_GE(std::max(0, p.satisfaction - 10), 0);
+    // 日次の収支が正しいことを確認
+    int daily_balance = person.daily_income - person.daily_expense;
+    EXPECT_EQ(daily_balance, 20);
 }
 
-// 消費活動をテスト
-TEST(PersonTest, Consumption) {
-    Person p;
-    p.money = 100;
-    int itemPrice = 20;
+// 所持品の管理テスト
+TEST(PersonTest, InventoryManagement) {
+    Person person;
     
-    // 十分なお金があるときの購入テスト
-    bool canBuy = p.money >= itemPrice;
-    EXPECT_TRUE(canBuy);
+    // 空のアイテムの追加を試みる
+    EXPECT_THROW(person.addInventoryItem(""), std::invalid_argument);
     
-    // 購入後のお金の減少を確認
-    int expectedMoney = p.money - itemPrice;
-    p.money -= itemPrice;
-    EXPECT_EQ(expectedMoney, p.money);
-    EXPECT_EQ(80, p.money);
+    // 正常なアイテムの追加
+    EXPECT_NO_THROW(person.addInventoryItem("Bread"));
+    EXPECT_NO_THROW(person.addInventoryItem("Tool"));
+    EXPECT_EQ(person.inventory.size(), 2);
     
-    // アイテムが正しく追加されるかテスト
-    size_t initialInventorySize = p.inventory.size();
-    p.inventory.push_back("テスト商品");
-    EXPECT_EQ(initialInventorySize + 1, p.inventory.size());
+    // アイテムの削除
+    EXPECT_TRUE(person.removeInventoryItem("Bread"));
+    EXPECT_EQ(person.inventory.size(), 1);
     
-    // お金が不足している場合に購入できないことをテスト
-    p.money = 10;
-    canBuy = p.money >= itemPrice;
-    EXPECT_FALSE(canBuy);
-    
-    // お金が不足している場合は購入せずお金も減らないテスト
-    int moneyBeforeFailing = p.money;
-    if (p.money >= itemPrice) {
-        p.money -= itemPrice;
-    }
-    EXPECT_EQ(moneyBeforeFailing, p.money);
+    // 存在しないアイテムの削除を試みる
+    EXPECT_FALSE(person.removeInventoryItem("NonExistentItem"));
 }
 
-// 収入テスト
-TEST(PersonTest, Income) {
-    Person p;
-    p.money = 50;
-    p.daily_income = 25;
+// 健康状態の変更テスト
+TEST(PersonTest, HealthStatusChange) {
+    Person person;
     
-    // 収入獲得後の所持金増加テスト
-    int expectedMoney = p.money + p.daily_income;
-    p.money += p.daily_income;
-    EXPECT_EQ(expectedMoney, p.money);
-    EXPECT_EQ(75, p.money);
+    // 初期状態は健康
+    EXPECT_EQ(person.health_status, HealthStatus::HEALTHY);
     
-    // 収入がない場合
-    p.money = 50;
-    p.daily_income = 0;
-    expectedMoney = p.money + p.daily_income;
-    p.money += p.daily_income;
-    EXPECT_EQ(expectedMoney, p.money);
-    EXPECT_EQ(50, p.money);
+    // 病気に変更
+    person.setHealthStatus(HealthStatus::SICK);
+    EXPECT_EQ(person.health_status, HealthStatus::SICK);
+    
+    // 死亡に変更
+    person.setHealthStatus(HealthStatus::DEAD);
+    EXPECT_EQ(person.health_status, HealthStatus::DEAD);
 }
 
-// リスク許容度による行動の違いをテスト
-TEST(PersonTest, RiskTolerance) {
-    Person lowRisk;
-    lowRisk.risk_tolerance = 20; // リスク許容度低い
+// 犯罪傾向の変更テスト
+TEST(PersonTest, CrimeTendencyChange) {
+    Person person;
     
-    Person highRisk;
-    highRisk.risk_tolerance = 80; // リスク許容度高い
+    // 初期状態は低
+    EXPECT_EQ(person.crime_tendency, CrimeTendency::LOW);
     
-    // リスク許容度の比較
-    EXPECT_TRUE(lowRisk.risk_tolerance < highRisk.risk_tolerance);
+    // 中程度に変更
+    person.setCrimeTendency(CrimeTendency::MEDIUM);
+    EXPECT_EQ(person.crime_tendency, CrimeTendency::MEDIUM);
     
-    // リスク許容度に基づいて行動が異なるかテスト
-    const int risky_threshold = 50;
-    bool lowRiskPersonTakesRisk = lowRisk.risk_tolerance > risky_threshold;
-    bool highRiskPersonTakesRisk = highRisk.risk_tolerance > risky_threshold;
-    
-    EXPECT_FALSE(lowRiskPersonTakesRisk);
-    EXPECT_TRUE(highRiskPersonTakesRisk);
+    // 高に変更
+    person.setCrimeTendency(CrimeTendency::HIGH);
+    EXPECT_EQ(person.crime_tendency, CrimeTendency::HIGH);
 }
 
-// 職業の設定と取得テスト
-TEST(PersonTest, JobSetting) {
-    Person p;
-    EXPECT_EQ("", p.job);  // デフォルトでは空文字
+// 基本的な継承チェック
+TEST(PersonTest, InheritanceCheck) {
+    Person person;
+    Agent* agent = &person;  // 基底クラスのポインタに代入可能であることを確認
     
-    p.job = "農民";
-    EXPECT_EQ("農民", p.job);
+    agent->id = 202;
+    agent->money = 1000;
     
-    p.job = "商人";
-    EXPECT_EQ("商人", p.job);
-    
-    p.job = "貴族";
-    EXPECT_EQ("貴族", p.job);
+    EXPECT_EQ(person.id, 202);
+    EXPECT_EQ(person.money, 1000);
 }
 
-// 健康状態のテスト
-TEST(PersonTest, HealthStatus) {
-    Person p;
-    EXPECT_EQ(2, p.health_status); // デフォルトで健康
+// 範囲チェックのテスト
+TEST(PersonTest, RangeValidation) {
+    Person person;
     
-    p.health_status = 1; // 病気
-    EXPECT_EQ(1, p.health_status);
+    // 満足度の範囲チェック
+    EXPECT_NO_THROW(person.setSatisfaction(0));
+    EXPECT_NO_THROW(person.setSatisfaction(100));
+    EXPECT_THROW(person.setSatisfaction(-1), std::out_of_range);
+    EXPECT_THROW(person.setSatisfaction(101), std::out_of_range);
     
-    p.health_status = 0; // 重病
-    EXPECT_EQ(0, p.health_status);
+    // リスク選好度の範囲チェック
+    EXPECT_NO_THROW(person.setRiskTolerance(0));
+    EXPECT_NO_THROW(person.setRiskTolerance(100));
+    EXPECT_THROW(person.setRiskTolerance(-1), std::out_of_range);
+    EXPECT_THROW(person.setRiskTolerance(101), std::out_of_range);
+    
+    // 日次収入と支出の範囲チェック
+    EXPECT_NO_THROW(person.setDailyIncome(0));
+    EXPECT_NO_THROW(person.setDailyExpense(0));
+    EXPECT_THROW(person.setDailyIncome(-1), std::invalid_argument);
+    EXPECT_THROW(person.setDailyExpense(-1), std::invalid_argument);
+}
+
+// 日次更新のテスト
+TEST(PersonTest, DailyUpdate) {
+    Person person;
+    person.setDailyIncome(100);
+    person.setDailyExpense(30);
+    
+    // 日次更新の実行
+    person.updateDaily();
+    
+    // 収支が正しく反映されているか確認
+    EXPECT_EQ(person.money, 70);  // 100(収入) - 30(支出) = 70
+    
+    // 複数日のテスト
+    person.updateDaily();
+    EXPECT_EQ(person.money, 140);  // 70 + (100 - 30) = 140
 }

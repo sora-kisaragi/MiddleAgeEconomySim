@@ -1,35 +1,106 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <stdexcept>
 #include "agent.h"
 
+// 健康状態を表す列挙型
+enum class HealthStatus {
+    DEAD = 0,
+    SICK = 1,
+    HEALTHY = 2
+};
+
+// 犯罪傾向を表す列挙型
+enum class CrimeTendency {
+    LOW = 0,
+    MEDIUM = 1,
+    HIGH = 2
+};
+
 struct Person : public Agent {
-    // 職業と経済状態
     std::string name;
     std::string job;
-    int daily_income;
-    int daily_expense;
-    
-    // 所有物
+    int32_t daily_income;
+    int32_t daily_expense;
     std::vector<std::string> inventory;
     
-    // 状態属性
-    int health_status;    // 健康状態（0: 死亡, 1: 病気, 2: 健康）
-    int crime_tendency;   // 犯罪傾向（0: 低, 1: 中, 2: 高）
+    HealthStatus health_status;
+    CrimeTendency crime_tendency;
     
-    // 行動決定要素
-    int satisfaction;     // 満足度（0-100）
-    int risk_tolerance;   // リスク選好度（0-100）
+    int32_t satisfaction;     // 満足度（0-100）
+    int32_t risk_tolerance;   // リスク選好度（0-100）
     
     // デフォルトコンストラクタ
     Person() : 
         name(""), 
         job(""), 
         daily_income(0), 
-        daily_expense(0), 
-        health_status(2),  // 初期状態は健康
-        crime_tendency(0),  // 初期状態は犯罪傾向低
-        satisfaction(50),   // 中程度の満足度
-        risk_tolerance(50)  // 中程度のリスク選好度
+        daily_expense(0),
+        health_status(HealthStatus::HEALTHY),
+        crime_tendency(CrimeTendency::LOW),
+        satisfaction(50),
+        risk_tolerance(50)
     {}
+    
+    // 値の範囲チェック付きのセッター
+    void setSatisfaction(int32_t value) {
+        if (value < 0 || value > 100) {
+            throw std::out_of_range("Satisfaction must be between 0 and 100");
+        }
+        satisfaction = value;
+    }
+    
+    void setRiskTolerance(int32_t value) {
+        if (value < 0 || value > 100) {
+            throw std::out_of_range("Risk tolerance must be between 0 and 100");
+        }
+        risk_tolerance = value;
+    }
+    
+    void setDailyIncome(int32_t value) {
+        if (value < 0) {
+            throw std::invalid_argument("Daily income cannot be negative");
+        }
+        daily_income = value;
+    }
+    
+    void setDailyExpense(int32_t value) {
+        if (value < 0) {
+            throw std::invalid_argument("Daily expense cannot be negative");
+        }
+        daily_expense = value;
+    }
+    
+    void setHealthStatus(HealthStatus status) {
+        health_status = status;
+    }
+    
+    void setCrimeTendency(CrimeTendency tendency) {
+        crime_tendency = tendency;
+    }
+    
+    // アイテムの安全な追加
+    void addInventoryItem(const std::string& item) {
+        if (item.empty()) {
+            throw std::invalid_argument("Cannot add empty item to inventory");
+        }
+        inventory.push_back(item);
+    }
+    
+    // アイテムの安全な削除
+    bool removeInventoryItem(const std::string& item) {
+        auto it = std::find(inventory.begin(), inventory.end(), item);
+        if (it != inventory.end()) {
+            inventory.erase(it);
+            return true;
+        }
+        return false;
+    }
+    
+    // 日次更新（収入と支出の処理）
+    void updateDaily() {
+        addMoney(daily_income);  // Agent::addMoneyを使用（オーバーフロー保護付き）
+        addMoney(-daily_expense);
+    }
 };
