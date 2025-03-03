@@ -177,12 +177,15 @@ ctest --output-on-failure
 ```
 
 ### コードカバレッジの確認
+
+> **注意**: フェーズ1ではコードカバレッジ収集を行いません。以下の手順はフェーズ2以降で適用されます。
+
 コードカバレッジを確認するには、以下の手順に従ってください。
 
 1. **カバレッジオプションを有効にしてビルド**
     ```bash
     mkdir -p build && cd build
-    cmake -DCODE_COVERAGE=ON ..
+    cmake -DCODE_COVERAGE=ON -DPHASE_1=FALSE ..
     make
     ```
 2. **テスト実行後、カバレッジレポートを生成**
