@@ -4,7 +4,11 @@
 #include <cstdint>
 #include "../agent/agent.h"
 
-struct Business : public Agent {
+#ifndef BUSINESS_H
+#define BUSINESS_H
+
+class Business : public Agent {
+public:
     std::string product;
     int32_t stock;
     int64_t price;
@@ -12,7 +16,8 @@ struct Business : public Agent {
     int32_t daily_production;
     float profit_margin;
     int32_t market_share;
-    
+    std::string sector;
+
     // デフォルトコンストラクタ
     Business() :
         product(""),
@@ -137,10 +142,12 @@ struct Business : public Agent {
         }
         
         int64_t total_salary = per_worker_salary * workers;
-        if (total_salary > money) {
-            throw std::runtime_error("Not enough money to pay workers");
+        if (money < total_salary) {
+            throw std::runtime_error("Insufficient funds for worker payment");
         }
         
-        addMoney(-total_salary);
+        addMoney(-total_salary);  // Agent::addMoneyを使用（既存のオーバーフロー保護付き）
     }
 };
+
+#endif // BUSINESS_H
