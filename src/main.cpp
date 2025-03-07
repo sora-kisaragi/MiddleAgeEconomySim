@@ -88,7 +88,7 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
 int main() {
     // 初期化
     Market market;
-    market.setPriceVolatility(0.1f);  // 価格変動性を設定
+    market.price_volatility = 0.1f;  // 価格変動性を設定
     
     std::vector<Person> people;
     Person farmer;

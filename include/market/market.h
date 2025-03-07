@@ -138,6 +138,49 @@ public:
 
         return true;
     }
+
+    void registerProduct(const std::string& product, int initial_price) {
+        addProduct(product, initial_price);
+    }
+
+    bool sell(const std::string& product, int quantity, int price) {
+        if (this->price.find(product) == this->price.end()) {
+            addProduct(product, price);
+        }
+        addStock(product, quantity);
+        return true;
+    }
+
+    int buy(const std::string& product, int quantity) {
+        auto price_it = price.find(product);
+        if (price_it == price.end()) {
+            throw std::invalid_argument("Product not found in market");
+        }
+        if (stock[product] < quantity) {
+            throw std::invalid_argument("Insufficient stock");
+        }
+        int total_cost = price_it->second * quantity;
+        stock[product] -= quantity;
+        addDemand(product, quantity);
+        updatePrice(product);
+        return total_cost;
+    }
+
+    void clearDaily() {
+        // 日次の統計情報をリセット
+        for (auto& [product, history] : supply_history) {
+            if (!history.empty()) {
+                history.clear();
+                history.push_back(0);
+            }
+        }
+        for (auto& [product, history] : demand_history) {
+            if (!history.empty()) {
+                history.clear();
+                history.push_back(0);
+            }
+        }
+    }
 };
 
 #endif // MARKET_H
