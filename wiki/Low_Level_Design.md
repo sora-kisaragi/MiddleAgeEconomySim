@@ -104,16 +104,34 @@ classDiagram
 ```mermaid
 classDiagram
     class Person {
+        // 基本情報
         int id
+        string name
         int money
+        
+        // 職業と経済状態
         string job
         int daily_income
         int daily_expense
+        
+        // 所有物
         vector<string> inventory
+        
+        // 状態属性
+        int health_status
+        int crime_tendency
+        
+        // 行動決定要素
         int satisfaction
         int risk_tolerance
     }
 ```
+
+- **基本情報**: 個人の識別情報と資産
+- **職業と経済状態**: 収入源と日々の経済活動
+- **所有物**: 個人が所持する物品リスト
+- **状態属性**: 健康や犯罪傾向などの行動に影響する要素
+- **行動決定要素**: 経済的意思決定の判断基準となる心理的要素
 
 ### 3.3 企業 (Business)
 

@@ -42,6 +42,7 @@
 このプロジェクトは以下の開発環境を使用しています。
 
 - **言語**: C++17
+- **コンパイラ**: gcc 14
 - **ビルドツール**: CMake
 - **テストツール**: Google Test
 - **CI/CD**: GIthub Actions
@@ -176,12 +177,15 @@ ctest --output-on-failure
 ```
 
 ### コードカバレッジの確認
+
+> **注意**: フェーズ1ではコードカバレッジ収集を行いません。以下の手順はフェーズ2以降で適用されます。
+
 コードカバレッジを確認するには、以下の手順に従ってください。
 
 1. **カバレッジオプションを有効にしてビルド**
     ```bash
     mkdir -p build && cd build
-    cmake -DCODE_COVERAGE=ON ..
+    cmake -DCODE_COVERAGE=ON -DPHASE_1=FALSE ..
     make
     ```
 2. **テスト実行後、カバレッジレポートを生成**
@@ -199,6 +203,10 @@ ctest --output-on-failure
     # Windows
     start coverage\index.html
     ```
+
+> **注意**: コードカバレッジの機能を正しく動作させるには、GCCコンパイラが必要です。
+> システムによってはデフォルトのコンパイラがClangなどの場合があるため、
+> CMakeの設定でGCCを明示的に指定しています。
 
 詳細なテスト方法については、[テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)を参照してください。
 
