@@ -23,8 +23,10 @@ include_directories(include)
 # ソースファイルを収集
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-# 実行ファイルをビルド
-add_executable(${PROJECT_NAME} ${SOURCES})
+# メインの実行ファイルのビルドを条件付きに
+if(NOT DEFINED BUILD_MAIN OR BUILD_MAIN)
+    add_executable(${PROJECT_NAME} ${SOURCES})
+endif()
 
 # テスト設定
 enable_testing()
