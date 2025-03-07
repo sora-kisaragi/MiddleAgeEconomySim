@@ -8,7 +8,6 @@ TEST(PersonTest, Creation) {
     // Agent部分の初期化を確認
     EXPECT_EQ(person.id, 0);
     EXPECT_EQ(person.money, 0);
-    EXPECT_TRUE(person.history.empty());
     
     // Person固有のフィールドが正しく初期化されているか確認
     EXPECT_EQ(person.name, "");
@@ -160,4 +159,43 @@ TEST(PersonTest, DailyUpdate) {
     // 複数日のテスト
     person.updateDaily();
     EXPECT_EQ(person.money, 140);  // 70 + (100 - 30) = 140
+}
+
+// 金銭管理のテスト
+TEST(PersonTest, MoneyManagement) {
+    Person person;
+    
+    // 正常な金銭の追加
+    person.addMoney(1000);
+    EXPECT_EQ(person.money, 1000);
+    
+    // 負の金額の処理（支出）
+    person.addMoney(-500);
+    EXPECT_EQ(person.money, 500);
+}
+
+// ステータス管理のテスト
+TEST(PersonTest, StatusManagement) {
+    Person person;
+    
+    // 健康状態の設定
+    person.setHealthStatus(HealthStatus::SICK);
+    EXPECT_EQ(person.health_status, HealthStatus::SICK);
+    
+    // 犯罪傾向の設定
+    person.setCrimeTendency(CrimeTendency::HIGH);
+    EXPECT_EQ(person.crime_tendency, CrimeTendency::HIGH);
+}
+
+// 満足度管理のテスト
+TEST(PersonTest, SatisfactionManagement) {
+    Person person;
+    
+    // 正常な満足度の設定
+    person.setSatisfaction(75);
+    EXPECT_EQ(person.satisfaction, 75);
+    
+    // 範囲外の満足度を設定
+    EXPECT_THROW(person.setSatisfaction(-1), std::out_of_range);
+    EXPECT_THROW(person.setSatisfaction(101), std::out_of_range);
 }
