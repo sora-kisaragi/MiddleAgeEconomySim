@@ -1,0 +1,58 @@
+{
+  "total_issues": 5,
+  "critical": 1,
+  "bugs": 2,
+  "enhancements": 2,
+  "issues": [
+    {
+      "title": "\ud83d\udc1b Price volatility compounds indefinitely causing economic instability",
+      "labels": [
+        "bug",
+        "critical",
+        "stability",
+        "math"
+      ],
+      "assignees": [],
+      "body": "## Description\nThe `price_volatility` variable in the Market class is multiplied by 1.1 without upper bounds, which can lead to extreme price fluctuations and numerical instability.\n\n## Location\n- **File**: `include/market/market.h`\n- **Lines**: 47, 62 (in `addStock()` and `addDemand()` methods)\n\n## Current Behavior\n```cpp\nprice_volatility *= 1.1f;  // No upper bound!\n```\n\n## Expected Behavior\nPrice volatility should have reasonable bounds to maintain economic stability.\n\n## Impact\n- Extreme price fluctuations after prolonged simulation\n- Numerical instability in price calculations  \n- Unrealistic economic behavior\n- Potential integer overflow in price values\n\n## Reproduction Steps\n1. Run simulation for many days (>20)\n2. Create frequent supply/demand imbalances\n3. Observe price volatility growing exponentially\n4. Prices become unrealistically volatile\n\n## Proposed Solution\n```cpp\n// Add upper bound and decay mechanism\nif (quantity < latest_demand) {\n    price_volatility = std::min(2.0f, price_volatility * 1.05f);\n}\n// Add decay over time\nprice_volatility = std::max(0.1f, price_volatility * 0.999f);\n```\n\n## Priority\n\ud83d\udd34 **Critical** - Affects core simulation stability\n"
+    },
+    {
+      "title": "\ud83d\udc1b Market history vectors grow indefinitely causing memory leak",
+      "labels": [
+        "bug",
+        "performance",
+        "memory"
+      ],
+      "assignees": [],
+      "body": "## Description\nThe `demand_history` and `supply_history` vectors in the Market class grow indefinitely without size limits, which could lead to memory exhaustion in long-running simulations.\n\n## Location\n- **File**: `include/market/market.h`\n- **Lines**: 14-15 (declarations), 41, 56 (usage)\n\n## Current Behavior\n```cpp\ndemand_history[product].push_back(quantity);  // Grows forever\nsupply_history[product].push_back(quantity);  // Grows forever\n```\n\n## Expected Behavior\nHistory should have reasonable size limits or use circular buffers.\n\n## Impact\n- Memory usage grows linearly with simulation duration\n- Potential out-of-memory crashes in long simulations\n- Degraded performance due to large vector operations\n\n## Proposed Solution\n1. **Option 1: Circular Buffer**\n```cpp\nconst size_t MAX_HISTORY = 100;\nif (demand_history[product].size() >= MAX_HISTORY) {\n    demand_history[product].erase(demand_history[product].begin());\n}\ndemand_history[product].push_back(quantity);\n```\n\n2. **Option 2: Periodic Cleanup**\n```cpp\n// In clearDaily() or periodic maintenance\nif (demand_history[product].size() > MAX_HISTORY) {\n    demand_history[product].resize(MAX_HISTORY/2);\n}\n```\n\n## Priority\n\ud83d\udfe1 **High** - Affects long-running simulations\n"
+    },
+    {
+      "title": "\u26a0\ufe0f Compilation warnings for unused parameters and variables",
+      "labels": [
+        "warning",
+        "code-quality"
+      ],
+      "assignees": [],
+      "body": "## Description\nSeveral compilation warnings about unused parameters and variables that should be addressed for clean builds.\n\n## Warnings Found\n\n### 1. Unused parameter 'borrower_id' in LoanProvider\n- **File**: `include/agent/loan_provider.h:62`\n- **Warning**: `warning: unused parameter 'borrower_id' [-Wunused-parameter]`\n\n### 2. Unused variable 'start' in transaction test\n- **File**: `tests/market_tests/transaction_test.cpp:125`\n- **Warning**: `warning: unused variable 'start' [-Wunused-variable]`\n\n## Impact\n- Cluttered build output\n- Indicates incomplete implementations\n- May hide more serious warnings\n\n## Solutions\n\n### For unused parameter:\n```cpp\n// Option 1: Mark as maybe unused\nAgent* findBorrower([[maybe_unused]] int64_t borrower_id) {\n    return nullptr;\n}\n\n// Option 2: Complete the implementation\nAgent* findBorrower(int64_t borrower_id) {\n    // TODO: Implement proper borrower lookup\n    (void)borrower_id; // Suppress warning temporarily\n    return nullptr;\n}\n```\n\n### For unused variable:\n```cpp\n// Remove unused variable or implement intended functionality\n// time_t start = std::time(nullptr);  // Remove this line\n```\n\n## Priority\n\ud83d\udfe2 **Low** - Code quality improvement\n"
+    },
+    {
+      "title": "\ud83d\udd27 Major implemented features not integrated into main simulation",
+      "labels": [
+        "enhancement",
+        "integration",
+        "phase-1"
+      ],
+      "assignees": [],
+      "body": "## Description\nSeveral fully implemented and tested features are not being used in the main simulation, significantly limiting its complexity and realism.\n\n## Unused Features\n\n### 1. Trade Route System\n- **Files**: `include/system/trade_route.h`, `tests/system_tests/trade_route_test.cpp`\n- **Status**: Implemented and tested, but not used in main simulation\n- **Impact**: No inter-regional trade simulation\n\n### 2. Government System  \n- **Files**: `include/agent/government.h`, `tests/agent_tests/government_test.cpp`\n- **Status**: Taxation and policy systems implemented but not integrated\n- **Impact**: No government intervention in economy\n\n### 3. Loan/Credit System\n- **Files**: `include/agent/loan_provider.h`, `include/market/loan.h`, tests\n- **Status**: Complete lending system but no connection to main economy\n- **Impact**: No credit-based economic activity\n\n## Current Main Simulation Limitations\n- Only basic producer-consumer interactions\n- No government taxation or policies\n- No credit/loan system\n- No trade routes or regional differences\n- Agents operate in isolation\n\n## Integration Points Needed\n\n### 1. Government Integration\n```cpp\n// In simulateDay()\ngovernment.collectTaxes(people, businesses);\ngovernment.implementPolicies(market);\ngovernment.adjustBudget();\n```\n\n### 2. Loan System Integration  \n```cpp\n// Allow agents to take loans for purchases/expansion\nif (person.money < market.getPrice(food)) {\n    Loan loan = loanProvider.provideLoan(&person, needed_amount);\n    // Handle loan transaction\n}\n```\n\n### 3. Trade Route Integration\n```cpp\n// Add inter-regional trade\nfor (auto& route : trade_routes) {\n    route.executeTradeIfProfitable(market);\n}\n```\n\n## Expected Benefits\n- More realistic economic simulation\n- Complex multi-agent interactions\n- Government economic intervention\n- Credit-based economic growth\n- Regional trade dynamics\n\n## Priority\n\ud83d\udfe1 **High** - Core feature integration for Phase 1 completion\n"
+    },
+    {
+      "title": "\ud83d\udccb Phase 1 implementation tasks blocked - systematic completion needed",
+      "labels": [
+        "enhancement",
+        "phase-1",
+        "checklist"
+      ],
+      "assignees": [],
+      "body": "## Description\nMultiple major implementation tasks from the Phase 1 checklist remain incomplete, blocking project progression to Phase 2.\n\n## Pending Critical Tasks\n\n### 1. Agent Interaction Methods (\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u9593\u306e\u76f8\u4e92\u4f5c\u7528\u30e1\u30bd\u30c3\u30c9\u5b9f\u88c5)\n- **Status**: \u274c Not Started\n- **Blocking**: Agent-to-agent economic interactions\n- **Required for**: Social economic behavior, complex transactions\n\n### 2. Market Trading System Enhancement (\u5e02\u5834\u3067\u306e\u53d6\u5f15\u30b7\u30b9\u30c6\u30e0\u5b9f\u88c5)\n- **Status**: \u26a0\ufe0f Basic implementation only\n- **Blocking**: Advanced market mechanisms  \n- **Required for**: Realistic price discovery, complex transactions\n\n### 3. Integration Tests (\u7d71\u5408\u30c6\u30b9\u30c8)\n- **Status**: \u274c Missing\n- **Blocking**: System-level quality assurance\n- **Required for**: Multi-component interaction validation\n\n### 4. Sample Implementation (\u30b5\u30f3\u30d7\u30eb\u5b9f\u88c5)\n- **Status**: \u26a0\ufe0f Very basic\n- **Blocking**: User experience and demonstration\n- **Required for**: Project usability and documentation\n\n## Current Blockers Analysis\n\n### Technical Blockers\n1. **Agent Interaction Framework**: No standardized way for agents to interact\n2. **Market Integration**: Features exist but aren't connected\n3. **Event System**: No framework for economic events (famine, war, etc.)\n\n### Process Blockers  \n1. **Testing Strategy**: No integration test framework\n2. **Documentation**: Incomplete usage examples\n3. **Sample Scenarios**: No realistic demonstration scenarios\n\n## Recommended Approach\n\n### Phase 1: Foundation (Week 1)\n- [ ] Create agent interaction interface\n- [ ] Integrate existing features into main simulation\n- [ ] Add basic error handling\n\n### Phase 2: Enhancement (Week 2)\n- [ ] Implement integration tests\n- [ ] Create sample scenarios\n- [ ] Complete missing documentation\n\n### Phase 3: Validation (Week 3)\n- [ ] Performance testing\n- [ ] User testing with samples\n- [ ] Final Phase 1 review\n\n## Acceptance Criteria\n- [ ] All major features integrated and working together\n- [ ] Integration tests passing\n- [ ] Sample scenarios demonstrating full capabilities\n- [ ] Documentation complete for Phase 1 features\n- [ ] Performance acceptable for target simulation sizes\n\n## Priority\n\ud83d\udd34 **Critical** - Blocking Phase 2 development\n"
+    }
+  ]
+}
