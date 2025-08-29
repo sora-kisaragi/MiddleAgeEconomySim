@@ -11,25 +11,38 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
                 Government& government, LoanProvider& loan_provider, std::vector<TradeRoute>& trade_routes) {
     std::cout << "=== 1日の経済活動をシミュレート ===\n";
     
-    // 生産活動
-    for (auto& business : businesses) {
-        int production = business.daily_production;
-        business.stock += production;
-        std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
+    // 安全性チェック
+    if (people.empty() || businesses.empty()) {
+        std::cerr << "エラー: エージェントまたは企業が設定されていません。\n";
+        return;
     }
     
-    // 貿易ルートによる商品移動
-    for (auto& route : trade_routes) {
-        if (route.travel_time > 0) {
-            std::cout << "=== 貿易ルート活動 ===\n";
-            std::cout << "拠点" << route.from_location_id << " から 拠点" << route.to_location_id << " への貿易が実行されました\n";
-            std::cout << "輸送品目: ";
-            for (const auto& item : route.goods) {
-                std::cout << item.first << "(" << item.second << "個) ";
+    try {
+        // 生産活動
+        for (auto& business : businesses) {
+            if (business.daily_production < 0) {
+                std::cerr << "警告: " << business.product << "の日次生産量が負の値です。\n";
+                continue;
             }
-            std::cout << " (移動時間: " << route.travel_time << "日)\n";
+            int production = business.daily_production;
+            business.stock += production;
+            std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
         }
-    }
+        
+        // 貿易ルートによる商品移動
+        for (auto& route : trade_routes) {
+            if (route.travel_time > 0 && !route.goods.empty()) {
+                std::cout << "=== 貿易ルート活動 ===\n";
+                std::cout << "拠点" << route.from_location_id << " から 拠点" << route.to_location_id << " への貿易が実行されました\n";
+                std::cout << "輸送品目: ";
+                for (const auto& item : route.goods) {
+                    if (item.second > 0) {
+                        std::cout << item.first << "(" << item.second << "個) ";
+                    }
+                }
+                std::cout << " (移動時間: " << route.travel_time << "日)\n";
+            }
+        }
     
     // 市場への出品
     for (auto& business : businesses) {
@@ -141,20 +154,28 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     
     // 市場の日次更新
     market.clearDaily();
+    
+    } catch (const std::exception& e) {
+        std::cerr << "シミュレーション中に重大なエラーが発生しました: " << e.what() << "\n";
+        std::cerr << "シミュレーションを安全に停止します。\n";
+    } catch (...) {
+        std::cerr << "予期しないエラーが発生しました。シミュレーションを停止します。\n";
+    }
 }
 
 int main() {
-    // 初期化
-    Market market;
-    market.setPriceVolatility(0.1f);  // 価格変動性を設定
-    
-    // 政府とローンプロバイダーの初期化
-    Government government;
-    government.money = 1000;        // 初期資金
-    government.approval_rating = 75.0f;  // 初期支持率
-    
-    LoanProvider loan_provider;
-    loan_provider.money = 5000;  // 融資可能資金
+    try {
+        // 初期化
+        Market market;
+        market.setPriceVolatility(0.1f);  // 価格変動性を設定
+        
+        // 政府とローンプロバイダーの初期化
+        Government government;
+        government.money = 1000;        // 初期資金
+        government.approval_rating = 75.0f;  // 初期支持率
+        
+        LoanProvider loan_provider;
+        loan_provider.money = 5000;  // 融資可能資金
     
     // 貿易ルートの設定
     std::vector<TradeRoute> trade_routes;
@@ -275,4 +296,12 @@ int main() {
     std::cout << "政府最終支持率: " << government.approval_rating << "%\n";
     
     return 0;
+    
+    } catch (const std::exception& e) {
+        std::cerr << "プログラム実行中に致命的なエラーが発生しました: " << e.what() << "\n";
+        return 1;
+    } catch (...) {
+        std::cerr << "予期しない致命的エラーが発生しました。\n";
+        return 2;
+    }
 }
