@@ -11,25 +11,38 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
                 Government& government, LoanProvider& loan_provider, std::vector<TradeRoute>& trade_routes) {
     std::cout << "=== 1日の経済活動をシミュレート ===\n";
     
-    // 生産活動
-    for (auto& business : businesses) {
-        int production = business.daily_production;
-        business.stock += production;
-        std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
+    // 安全性チェック
+    if (people.empty() || businesses.empty()) {
+        std::cerr << "エラー: エージェントまたは企業が設定されていません。\n";
+        return;
     }
     
-    // 貿易ルートによる商品移動
-    for (auto& route : trade_routes) {
-        if (route.travel_time > 0) {
-            std::cout << "=== 貿易ルート活動 ===\n";
-            std::cout << "拠点" << route.from_location_id << " から 拠点" << route.to_location_id << " への貿易が実行されました\n";
-            std::cout << "輸送品目: ";
-            for (const auto& item : route.goods) {
-                std::cout << item.first << "(" << item.second << "個) ";
+    try {
+        // 生産活動
+        for (auto& business : businesses) {
+            if (business.daily_production < 0) {
+                std::cerr << "警告: " << business.product << "の日次生産量が負の値です。\n";
+                continue;
             }
-            std::cout << " (移動時間: " << route.travel_time << "日)\n";
+            int production = business.daily_production;
+            business.stock += production;
+            std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
         }
-    }
+        
+        // 貿易ルートによる商品移動
+        for (auto& route : trade_routes) {
+            if (route.travel_time > 0 && !route.goods.empty()) {
+                std::cout << "=== 貿易ルート活動 ===\n";
+                std::cout << "拠点" << route.from_location_id << " から 拠点" << route.to_location_id << " への貿易が実行されました\n";
+                std::cout << "輸送品目: ";
+                for (const auto& item : route.goods) {
+                    if (item.second > 0) {
+                        std::cout << item.first << "(" << item.second << "個) ";
+                    }
+                }
+                std::cout << " (移動時間: " << route.travel_time << "日)\n";
+            }
+        }
     
     // 市場への出品
     for (auto& business : businesses) {
@@ -141,20 +154,28 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     
     // 市場の日次更新
     market.clearDaily();
+    
+    } catch (const std::exception& e) {
+        std::cerr << "シミュレーション中に重大なエラーが発生しました: " << e.what() << "\n";
+        std::cerr << "シミュレーションを安全に停止します。\n";
+    } catch (...) {
+        std::cerr << "予期しないエラーが発生しました。シミュレーションを停止します。\n";
+    }
 }
 
 int main() {
-    // 初期化
-    Market market;
-    market.price_volatility = 0.1f;  // 価格変動性を設定
-    
-    // 政府とローンプロバイダーの初期化
-    Government government;
-    government.money = 1000;        // 初期資金
-    government.approval_rating = 75.0f;  // 初期支持率
-    
-    LoanProvider loan_provider;
-    loan_provider.money = 5000;  // 融資可能資金
+    try {
+        // 初期化
+        Market market;
+        market.setPriceVolatility(0.1f);  // 価格変動性を設定
+        
+        // 政府とローンプロバイダーの初期化
+        Government government;
+        government.money = 1000;        // 初期資金
+        government.approval_rating = 75.0f;  // 初期支持率
+        
+        LoanProvider loan_provider;
+        loan_provider.money = 5000;  // 融資可能資金
     
     // 貿易ルートの設定
     std::vector<TradeRoute> trade_routes;
@@ -203,6 +224,68 @@ int main() {
         simulateDay(people, businesses, market, government, loan_provider, trade_routes);
     }
     
+    // エージェント間の直接取引の実例
+    std::cout << "\n=== エージェント間直接取引 ===\n";
+    if (people.size() >= 2) {
+        Person& farmer = people[0];
+        Person& merchant = people[1];
+        
+        farmer.money = 300;
+        merchant.money = 200;
+        
+        std::cout << "取引前 - " << farmer.name << ": " << farmer.money << "コイン, " 
+                 << merchant.name << ": " << merchant.money << "コイン\n";
+                 
+        // 農夫が商人から道具を購入
+        bool trade_success = farmer.directTrade(&merchant, "道具", 2, 25);
+        if (trade_success) {
+            std::cout << "取引成功！\n";
+        }
+        
+        std::cout << "取引後 - " << farmer.name << ": " << farmer.money << "コイン, " 
+                 << merchant.name << ": " << merchant.money << "コイン\n";
+    }
+    
+    // 融資システムの実例
+    std::cout << "\n=== エージェント間融資 ===\n";
+    if (people.size() >= 2) {
+        Person& borrower = people[0];
+        Person& lender = people[1];
+        
+        borrower.money = 50;
+        lender.money = 500;
+        
+        std::cout << "融資前 - 借り手: " << borrower.money << "コイン, 貸し手: " << lender.money << "コイン\n";
+        
+        bool loan_success = borrower.requestLoan(&lender, 100, 5.0f);
+        if (loan_success) {
+            std::cout << "融資成功！\n";
+        }
+        
+        std::cout << "融資後 - 借り手: " << borrower.money << "コイン, 貸し手: " << lender.money << "コイン\n";
+    }
+    
+    // サービス提供の実例
+    std::cout << "\n=== サービス提供 ===\n";
+    if (people.size() >= 2) {
+        Person& service_provider = people[1];
+        Person& client = people[0];
+        
+        service_provider.money = 200;
+        client.money = 300;
+        
+        std::cout << "サービス提供前 - 提供者: " << service_provider.money 
+                 << "コイン, 顧客: " << client.money << "コイン\n";
+        
+        bool service_success = service_provider.provideService(&client, "相談サービス", 75);
+        if (service_success) {
+            std::cout << "サービス提供成功！\n";
+        }
+        
+        std::cout << "サービス提供後 - 提供者: " << service_provider.money 
+                 << "コイン, 顧客: " << client.money << "コイン\n";
+    }
+    
     // 最終結果表示
     std::cout << "\n=== シミュレーション結果 ===\n";
     for (const auto& person : people) {
@@ -213,4 +296,12 @@ int main() {
     std::cout << "政府最終支持率: " << government.approval_rating << "%\n";
     
     return 0;
+    
+    } catch (const std::exception& e) {
+        std::cerr << "プログラム実行中に致命的なエラーが発生しました: " << e.what() << "\n";
+        return 1;
+    } catch (...) {
+        std::cerr << "予期しない致命的エラーが発生しました。\n";
+        return 2;
+    }
 }

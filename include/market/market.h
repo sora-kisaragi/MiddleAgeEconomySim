@@ -9,7 +9,7 @@
 #include "../market/business.h"
 
 class Market {
-public:
+private:
     std::map<std::string, int> stock;
     std::map<std::string, int> price;
     std::map<std::string, std::vector<int>> demand_history;
@@ -19,69 +19,16 @@ public:
     static const size_t MAX_HISTORY_SIZE = 100;  // Limit history to prevent memory leaks
     static constexpr float MAX_VOLATILITY = 2.0f;    // Cap volatility to prevent instability
 
+public:
     Market() : price_volatility(0.1f) {}
-
-    void addProduct(const std::string& product, int initial_price) {
-        price[product] = initial_price;
-        stock[product] = 0;
-        if (demand_history.find(product) == demand_history.end()) {
-            demand_history[product] = std::vector<int>();
-            demand_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
-            demand_history[product].push_back(0);  // 初期需要を0として記録
-        }
-        if (supply_history.find(product) == supply_history.end()) {
-            supply_history[product] = std::vector<int>();
-            supply_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
-            supply_history[product].push_back(0);  // 初期供給を0として記録
-        }
+    
+    // Getter methods for encapsulated data
+    float getPriceVolatility() const { return price_volatility; }
+    void setPriceVolatility(float volatility) { 
+        price_volatility = std::max(0.0f, std::min(volatility, MAX_VOLATILITY)); 
     }
 
-    void addStock(const std::string& product, int quantity) {
-        if (stock.find(product) == stock.end()) {
-            stock[product] = 0;
-        }
-        stock[product] += quantity;
-        if (supply_history.find(product) == supply_history.end()) {
-            supply_history[product] = std::vector<int>();
-        }
-        supply_history[product].push_back(quantity);
-        
-        // Limit history size to prevent memory leaks
-        if (supply_history[product].size() > MAX_HISTORY_SIZE) {
-            supply_history[product].erase(supply_history[product].begin());
-        }
-        
-        // 需要と供給の不均衡をチェック
-        if (!demand_history[product].empty()) {
-            int latest_demand = demand_history[product].back();
-            if (quantity < latest_demand) {
-                // Fix: Add volatility incrementally with bounds instead of multiplication
-                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
-            }
-        }
-    }
-
-    void addDemand(const std::string& product, int quantity) {
-        if (demand_history.find(product) == demand_history.end()) {
-            demand_history[product] = std::vector<int>();
-        }
-        demand_history[product].push_back(quantity);
-
-        // Limit history size to prevent memory leaks
-        if (demand_history[product].size() > MAX_HISTORY_SIZE) {
-            demand_history[product].erase(demand_history[product].begin());
-        }
-
-        // 需要が供給を上回る場合、価格変動性を増加
-        if (!supply_history[product].empty()) {
-            int latest_supply = supply_history[product].back();
-            if (quantity > latest_supply) {
-                // Fix: Add volatility incrementally with bounds instead of multiplication
-                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
-            }
-        }
-    }
-
+    // Public interface methods
     int getPrice(const std::string& product) const {
         auto it = price.find(product);
         return it != price.end() ? it->second : 0;
@@ -196,6 +143,68 @@ public:
             if (!history.empty()) {
                 history.clear();
                 history.push_back(0);
+            }
+        }
+    }
+
+private:
+    void addProduct(const std::string& product, int initial_price) {
+        price[product] = initial_price;
+        stock[product] = 0;
+        if (demand_history.find(product) == demand_history.end()) {
+            demand_history[product] = std::vector<int>();
+            demand_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
+            demand_history[product].push_back(0);  // 初期需要を0として記録
+        }
+        if (supply_history.find(product) == supply_history.end()) {
+            supply_history[product] = std::vector<int>();
+            supply_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
+            supply_history[product].push_back(0);  // 初期供給を0として記録
+        }
+    }
+
+    void addStock(const std::string& product, int quantity) {
+        if (stock.find(product) == stock.end()) {
+            stock[product] = 0;
+        }
+        stock[product] += quantity;
+        if (supply_history.find(product) == supply_history.end()) {
+            supply_history[product] = std::vector<int>();
+        }
+        supply_history[product].push_back(quantity);
+        
+        // Limit history size to prevent memory leaks
+        if (supply_history[product].size() > MAX_HISTORY_SIZE) {
+            supply_history[product].erase(supply_history[product].begin());
+        }
+        
+        // 需要と供給の不均衡をチェック
+        if (!demand_history[product].empty()) {
+            int latest_demand = demand_history[product].back();
+            if (quantity < latest_demand) {
+                // Fix: Add volatility incrementally with bounds instead of multiplication
+                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
+            }
+        }
+    }
+
+    void addDemand(const std::string& product, int quantity) {
+        if (demand_history.find(product) == demand_history.end()) {
+            demand_history[product] = std::vector<int>();
+        }
+        demand_history[product].push_back(quantity);
+
+        // Limit history size to prevent memory leaks
+        if (demand_history[product].size() > MAX_HISTORY_SIZE) {
+            demand_history[product].erase(demand_history[product].begin());
+        }
+
+        // 需要が供給を上回る場合、価格変動性を増加
+        if (!supply_history[product].empty()) {
+            int latest_supply = supply_history[product].back();
+            if (quantity > latest_supply) {
+                // Fix: Add volatility incrementally with bounds instead of multiplication
+                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
             }
         }
     }
