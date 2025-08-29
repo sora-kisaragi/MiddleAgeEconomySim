@@ -4,6 +4,8 @@
 #include <limits>
 #include <stdexcept>
 #include <cstdint>
+#include <vector>
+#include <string>
 
 class Agent {
 public:
@@ -21,6 +23,24 @@ public:
         }
         money += amount;
     }
+
+    // Agent interaction methods
+    virtual bool canInteractWith(const Agent* other) const {
+        return other != nullptr && other != this;
+    }
+
+    virtual bool directTrade(Agent* other, const std::string& item, int quantity, int64_t price);
+    virtual bool requestLoan(Agent* lender, int64_t amount, float interest_rate);
+    virtual bool provideService(Agent* client, const std::string& service, int64_t cost);
+    
+    // Virtual methods for different agent types to override
+    virtual std::string getAgentType() const { return "Agent"; }
+    virtual void updateState() {}
+    virtual void dailyUpdate() {}
+
+    // Transaction history management
+    size_t getTransactionCount() const;
+    void clearOldTransactions(size_t max_history = 1000);
 };
 
 #endif // AGENT_H

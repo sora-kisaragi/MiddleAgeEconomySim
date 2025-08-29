@@ -28,6 +28,9 @@ file(GLOB_RECURSE PROJECT_SOURCES
 )
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
 
+# Add project sources to test target
+target_sources(unit_tests PRIVATE ${PROJECT_SOURCES})
+
 # GoogleTestとのリンク
 target_link_libraries(unit_tests PRIVATE
     GTest::gtest_main

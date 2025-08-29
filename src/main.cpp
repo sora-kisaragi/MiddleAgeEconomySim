@@ -146,7 +146,7 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
 int main() {
     // 初期化
     Market market;
-    market.price_volatility = 0.1f;  // 価格変動性を設定
+    market.setPriceVolatility(0.1f);  // 価格変動性を設定
     
     // 政府とローンプロバイダーの初期化
     Government government;
@@ -201,6 +201,68 @@ int main() {
     for (int day = 1; day <= 5; ++day) {
         std::cout << "\n=== Day " << day << " ===\n";
         simulateDay(people, businesses, market, government, loan_provider, trade_routes);
+    }
+    
+    // エージェント間の直接取引の実例
+    std::cout << "\n=== エージェント間直接取引 ===\n";
+    if (people.size() >= 2) {
+        Person& farmer = people[0];
+        Person& merchant = people[1];
+        
+        farmer.money = 300;
+        merchant.money = 200;
+        
+        std::cout << "取引前 - " << farmer.name << ": " << farmer.money << "コイン, " 
+                 << merchant.name << ": " << merchant.money << "コイン\n";
+                 
+        // 農夫が商人から道具を購入
+        bool trade_success = farmer.directTrade(&merchant, "道具", 2, 25);
+        if (trade_success) {
+            std::cout << "取引成功！\n";
+        }
+        
+        std::cout << "取引後 - " << farmer.name << ": " << farmer.money << "コイン, " 
+                 << merchant.name << ": " << merchant.money << "コイン\n";
+    }
+    
+    // 融資システムの実例
+    std::cout << "\n=== エージェント間融資 ===\n";
+    if (people.size() >= 2) {
+        Person& borrower = people[0];
+        Person& lender = people[1];
+        
+        borrower.money = 50;
+        lender.money = 500;
+        
+        std::cout << "融資前 - 借り手: " << borrower.money << "コイン, 貸し手: " << lender.money << "コイン\n";
+        
+        bool loan_success = borrower.requestLoan(&lender, 100, 5.0f);
+        if (loan_success) {
+            std::cout << "融資成功！\n";
+        }
+        
+        std::cout << "融資後 - 借り手: " << borrower.money << "コイン, 貸し手: " << lender.money << "コイン\n";
+    }
+    
+    // サービス提供の実例
+    std::cout << "\n=== サービス提供 ===\n";
+    if (people.size() >= 2) {
+        Person& service_provider = people[1];
+        Person& client = people[0];
+        
+        service_provider.money = 200;
+        client.money = 300;
+        
+        std::cout << "サービス提供前 - 提供者: " << service_provider.money 
+                 << "コイン, 顧客: " << client.money << "コイン\n";
+        
+        bool service_success = service_provider.provideService(&client, "相談サービス", 75);
+        if (service_success) {
+            std::cout << "サービス提供成功！\n";
+        }
+        
+        std::cout << "サービス提供後 - 提供者: " << service_provider.money 
+                 << "コイン, 顧客: " << client.money << "コイン\n";
     }
     
     // 最終結果表示
