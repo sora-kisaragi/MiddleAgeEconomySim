@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    Agent* findBorrower(int64_t borrower_id) {
+    Agent* findBorrower(int64_t /*borrower_id*/) {
         // この実装は後で適切なものに置き換える必要がある
         return nullptr;
     }

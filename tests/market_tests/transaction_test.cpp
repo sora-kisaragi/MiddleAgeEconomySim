@@ -122,7 +122,6 @@ TEST(TransactionTest, ValueCalculation) {
 // タイムスタンプ機能のテスト
 TEST(TransactionTest, TimestampFunctionality) {
     Transaction trans;
-    time_t start = std::time(nullptr);
     
     // 1秒待機
     std::this_thread::sleep_for(std::chrono::seconds(1));
