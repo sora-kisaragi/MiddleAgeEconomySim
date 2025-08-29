@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "../agent/person.h"
 #include "../market/business.h"
 
@@ -14,6 +15,9 @@ public:
     std::map<std::string, std::vector<int>> demand_history;
     std::map<std::string, std::vector<int>> supply_history;
     float price_volatility;
+    
+    static const size_t MAX_HISTORY_SIZE = 100;  // Limit history to prevent memory leaks
+    static constexpr float MAX_VOLATILITY = 2.0f;    // Cap volatility to prevent instability
 
     Market() : price_volatility(0.1f) {}
 
@@ -22,10 +26,12 @@ public:
         stock[product] = 0;
         if (demand_history.find(product) == demand_history.end()) {
             demand_history[product] = std::vector<int>();
+            demand_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
             demand_history[product].push_back(0);  // 初期需要を0として記録
         }
         if (supply_history.find(product) == supply_history.end()) {
             supply_history[product] = std::vector<int>();
+            supply_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
             supply_history[product].push_back(0);  // 初期供給を0として記録
         }
     }
@@ -40,11 +46,17 @@ public:
         }
         supply_history[product].push_back(quantity);
         
+        // Limit history size to prevent memory leaks
+        if (supply_history[product].size() > MAX_HISTORY_SIZE) {
+            supply_history[product].erase(supply_history[product].begin());
+        }
+        
         // 需要と供給の不均衡をチェック
         if (!demand_history[product].empty()) {
             int latest_demand = demand_history[product].back();
             if (quantity < latest_demand) {
-                price_volatility *= 1.1f;  // 供給不足で価格変動性を増加
+                // Fix: Add volatility incrementally with bounds instead of multiplication
+                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
             }
         }
     }
@@ -55,11 +67,17 @@ public:
         }
         demand_history[product].push_back(quantity);
 
+        // Limit history size to prevent memory leaks
+        if (demand_history[product].size() > MAX_HISTORY_SIZE) {
+            demand_history[product].erase(demand_history[product].begin());
+        }
+
         // 需要が供給を上回る場合、価格変動性を増加
         if (!supply_history[product].empty()) {
             int latest_supply = supply_history[product].back();
             if (quantity > latest_supply) {
-                price_volatility *= 1.1f;
+                // Fix: Add volatility incrementally with bounds instead of multiplication
+                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
             }
         }
     }

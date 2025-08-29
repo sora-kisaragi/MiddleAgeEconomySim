@@ -64,6 +64,101 @@
           "detected_at": "2025-08-29T06:57:29.070696"
         }
       ]
+    },
+    {
+      "timestamp": "2025-08-29T07:19:33.338682",
+      "total_issues": 6,
+      "severity_breakdown": {
+        "by_severity": {
+          "warning": 3,
+          "info": 2,
+          "enhancement": 1
+        },
+        "by_type": {
+          "build_warning": 2,
+          "todo_marker": 1,
+          "memory_issue": 1,
+          "hardcoded_value": 1,
+          "integration_gap": 1
+        }
+      },
+      "issues": [
+        {
+          "type": "build_warning",
+          "severity": "warning",
+          "file": "/home/runner/work/MiddleAgeEconomySim/MiddleAgeEconomySim/include/agent/loan_provider.h",
+          "line": 62,
+          "message": "unused parameter ‘borrower_id’",
+          "detected_at": "2025-08-29T07:19:33.329474"
+        },
+        {
+          "type": "build_warning",
+          "severity": "warning",
+          "file": "/home/runner/work/MiddleAgeEconomySim/MiddleAgeEconomySim/tests/market_tests/transaction_test.cpp",
+          "line": 125,
+          "message": "unused variable ‘start’",
+          "detected_at": "2025-08-29T07:19:33.329487"
+        },
+        {
+          "type": "todo_marker",
+          "severity": "info",
+          "file": "tests/market_tests/transaction_test.cpp",
+          "line": 7,
+          "message": "TODO found: * TODO: 実装予定のテストケース",
+          "detected_at": "2025-08-29T07:19:33.335669"
+        },
+        {
+          "type": "memory_issue",
+          "severity": "warning",
+          "file": "include/market/market.h",
+          "message": "Unbounded vector growth detected in Market class",
+          "detected_at": "2025-08-29T07:19:33.338433"
+        },
+        {
+          "type": "hardcoded_value",
+          "severity": "info",
+          "file": "src/main.cpp",
+          "message": "Hardcoded product list found - consider making configurable",
+          "detected_at": "2025-08-29T07:19:33.338488"
+        },
+        {
+          "type": "integration_gap",
+          "severity": "enhancement",
+          "file": "src/main.cpp",
+          "message": "TradeRoute is included but not used in main simulation",
+          "detected_at": "2025-08-29T07:19:33.338636"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-08-29T07:26:52.412478",
+      "total_issues": 2,
+      "severity_breakdown": {
+        "by_severity": {
+          "info": 2
+        },
+        "by_type": {
+          "todo_marker": 1,
+          "hardcoded_value": 1
+        }
+      },
+      "issues": [
+        {
+          "type": "todo_marker",
+          "severity": "info",
+          "file": "tests/market_tests/transaction_test.cpp",
+          "line": 7,
+          "message": "TODO found: * TODO: 実装予定のテストケース",
+          "detected_at": "2025-08-29T07:26:52.409502"
+        },
+        {
+          "type": "hardcoded_value",
+          "severity": "info",
+          "file": "src/main.cpp",
+          "message": "Hardcoded product list found - consider making configurable",
+          "detected_at": "2025-08-29T07:26:52.412326"
+        }
+      ]
     }
   ],
   "resolved_issues": []
