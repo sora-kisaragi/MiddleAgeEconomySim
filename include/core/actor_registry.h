@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/economy_types.h"
+#include "agent/personality.h"
 
 #include <map>
 #include <optional>
@@ -33,6 +34,7 @@ struct ActorRecord {
     std::string name;
     ActorKind kind;
     std::optional<ActorId> owner_person_id;
+    std::optional<Personality> personality;
     bool active;
 };
 
@@ -51,7 +53,7 @@ struct StoreRecord {
 // balances live in the separate settlement ledger (#44), not in this registry.
 class ActorRegistry {
 public:
-    static ActorRegistry fromSpecs(const std::vector<ActorSpec>& specs) {
+    static ActorRegistry fromSpecs(const std::vector<ActorSpec>& specs, std::uint64_t master_seed = 0) {
         std::vector<std::string> keys;
         std::vector<std::string> store_keys;
         std::map<std::string, ActorSpec> by_key;
@@ -97,8 +99,10 @@ public:
             }
             const ActorId actor_id = actor_ids.at(spec.key);
             const AccountId account_id = account_ids.at(spec.key);
+            const std::optional<Personality> personality = spec.kind == ActorKind::Person
+                ? std::optional<Personality>(generatePersonality(master_seed, actor_id)) : std::nullopt;
             registry.actors_.emplace(actor_id, ActorRecord{actor_id, account_id, spec.key,
-                                                             spec.name, spec.kind, owner, true});
+                                                             spec.name, spec.kind, owner, personality, true});
             registry.accounts_.emplace(account_id, CashAccountRecord{account_id, actor_id});
             registry.keys_.emplace(spec.key, actor_id);
             if (spec.kind == ActorKind::Person) ++registry.population_;
@@ -139,7 +143,7 @@ public:
             ? std::optional<StoreId>(StoreId(next_store_)) : std::nullopt;
         try {
             actors_.emplace(actor_id, ActorRecord{actor_id, account_id, key, name,
-                                                  ActorKind::Business, owner_id, true});
+                                                  ActorKind::Business, owner_id, std::nullopt, true});
             accounts_.emplace(account_id, CashAccountRecord{account_id, actor_id});
             keys_.emplace(key, actor_id);
             if (store_id) {
