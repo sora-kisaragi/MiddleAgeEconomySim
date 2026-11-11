@@ -19,6 +19,7 @@ TEST(MarketAmountTest, Transact_Uses64BitCost) {
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     const int64_t cost = static_cast<int64_t>(std::numeric_limits<int>::max()) * 2;
     buyer.money = cost;
     seller.stock = 2;
@@ -34,6 +35,7 @@ TEST(MarketAmountTest, Transact_RecipientOverflow_DoesNotChangeBalancesOrMarket)
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     buyer.money = 100;
     seller.money = std::numeric_limits<int64_t>::max();
     seller.stock = 1;
@@ -50,6 +52,7 @@ TEST(MarketAmountTest, Transact_UnrepresentableSellerPrice_IsRejected) {
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     buyer.money = std::numeric_limits<int64_t>::max();
     seller.stock = 1;
     seller.price = static_cast<int64_t>(std::numeric_limits<int>::max()) + 1;
@@ -94,7 +97,9 @@ TEST(MarketAmountTest, MultipleSellerOffers_StockOverflow_IsRejected) {
     Person buyer;
     buyer.money = std::numeric_limits<int64_t>::max();
     Business first;
+    first.product = "grain";
     Business second;
+    second.product = "grain";
     first.stock = std::numeric_limits<int>::max() - 1;
     second.stock = std::numeric_limits<int>::max();
     first.price = second.price = 1;

@@ -60,7 +60,7 @@ public:
     }
 
     bool transact(Person* buyer, Business* seller, const std::string& product, int quantity) {
-        if (!buyer || !seller || quantity <= 0) return false;
+        if (!buyer || !seller || product.empty() || seller->product != product || quantity <= 0) return false;
         
         if (seller->stock < 0) return false;
         auto price_it = price.find(product);
@@ -115,12 +115,13 @@ public:
     }
 
     void registerProduct(const std::string& product, int initial_price) {
+        if (product.empty()) throw std::invalid_argument("Product name must not be empty");
         if (initial_price <= 0) throw std::invalid_argument("Price must be positive");
         addProduct(product, initial_price);
     }
 
     bool sell(const std::string& product, int quantity, int price) {
-        if (quantity <= 0 || price <= 0 || getStock(product) > std::numeric_limits<int>::max() - quantity) {
+        if (product.empty() || quantity <= 0 || price <= 0 || getStock(product) > std::numeric_limits<int>::max() - quantity) {
             return false;
         }
         if (daily_supply[product] > std::numeric_limits<int64_t>::max() - quantity) return false;
