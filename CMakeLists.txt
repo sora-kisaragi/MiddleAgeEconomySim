@@ -32,6 +32,17 @@ endif()
 enable_testing()
 add_subdirectory(tests)
 
+if(TARGET ${PROJECT_NAME})
+  foreach(scenario balanced shortage oversupply)
+    add_test(NAME CliScenario.${scenario}
+      COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:${PROJECT_NAME}>"
+        "-DSCENARIO=${scenario}" -P "${CMAKE_SOURCE_DIR}/tests/cli_scenario.cmake")
+  endforeach()
+  add_test(NAME CliScenario.InvalidDays COMMAND ${PROJECT_NAME} --days 0)
+  set_tests_properties(CliScenario.InvalidDays PROPERTIES WILL_FAIL TRUE)
+endif()
+
+
 # パッケージ設定
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
