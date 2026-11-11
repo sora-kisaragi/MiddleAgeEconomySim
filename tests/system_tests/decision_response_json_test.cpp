@@ -15,7 +15,7 @@ std::string response(const std::string& candidate = "buy") {
 } // namespace
 
 TEST(DecisionResponseJsonTest, ParsesExactShapeAndSelectsStoredCandidate) {
-    const DecisionRequest request("day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
+    const DecisionRequest request("run-42", "day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
         GameTime(8, 8, 1), 4, {{"pass", PassAction{"NO_ACTION"}},
         {"buy", PlaceOrderAction{IntentId(91), QuoteId(40), Quantity(3), Money(30), true}}});
     const auto parsed = parseDecisionResponseJson(response());

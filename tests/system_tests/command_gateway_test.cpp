@@ -8,7 +8,7 @@ namespace {
 const std::string hash(64, 'b');
 
 DecisionRequest request(unsigned int phase = 8) {
-    return DecisionRequest("day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
+    return DecisionRequest("run-42", "day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
                            GameTime(8, phase, 1), 4,
                            {{"pass", PassAction{"NO_ACTION"}},
                             {"buy", PlaceOrderAction{IntentId(91), QuoteId(40), Quantity(3), Money(30), true}}});
@@ -22,9 +22,12 @@ DecisionResponse response(const std::string& candidate_id = "buy") {
 
 TEST(CommandGatewayTest, CopiesStoredOrderAndTrustedMetadata) {
     const auto prepared = CommandGateway::prepareOrder(request(), response(),
+        "run-42", "run-42",
         ActorId(17), ActorId(17), 4, [] { return CommandId(100); });
     ASSERT_TRUE(prepared.has_value());
     EXPECT_EQ(prepared->command_id.value(), 100U);
+    EXPECT_EQ(prepared->run_id, "run-42");
+    EXPECT_EQ(prepared->decision_id, "day8-phase08-actor17-food-attempt1");
     EXPECT_EQ(prepared->actor_id.value(), 17U);
     ASSERT_TRUE(prepared->controller_person_id.has_value());
     EXPECT_EQ(prepared->controller_person_id->value(), 17U);
@@ -42,6 +45,7 @@ TEST(CommandGatewayTest, CopiesStoredOrderAndTrustedMetadata) {
 TEST(CommandGatewayTest, PassDoesNotProduceACommand) {
     int allocations = 0;
     const auto prepared = CommandGateway::prepareOrder(request(), response("pass"),
+        "run-42", "run-42",
         ActorId(17), ActorId(17), 4, [&] { ++allocations; return CommandId(100); });
     EXPECT_FALSE(prepared.has_value());
     EXPECT_EQ(allocations, 0);
@@ -51,14 +55,25 @@ TEST(CommandGatewayTest, RejectsCallerStatePhaseAndUnknownCandidate) {
     int allocations = 0;
     const auto allocate = [&] { ++allocations; return CommandId(100); };
     EXPECT_THROW(CommandGateway::prepareOrder(request(), response(),
+        "other-run", "run-42",
+        ActorId(17), ActorId(17), 4, allocate), std::invalid_argument);
+    EXPECT_THROW(CommandGateway::prepareOrder(request(), response(),
+        "run-42", "other-run",
+        ActorId(17), ActorId(17), 4, allocate), std::invalid_argument);
+    EXPECT_THROW(CommandGateway::prepareOrder(request(), response(),
+        "run-42", "run-42",
         ActorId(18), ActorId(17), 4, allocate), std::invalid_argument);
     EXPECT_THROW(CommandGateway::prepareOrder(request(), response(),
+        "run-42", "run-42",
         ActorId(17), std::nullopt, 4, allocate), std::invalid_argument);
     EXPECT_THROW(CommandGateway::prepareOrder(request(), response(),
+        "run-42", "run-42",
         ActorId(17), ActorId(17), 5, allocate), std::invalid_argument);
     EXPECT_THROW(CommandGateway::prepareOrder(request(3), response(),
+        "run-42", "run-42",
         ActorId(17), ActorId(17), 4, allocate), std::invalid_argument);
     EXPECT_THROW(CommandGateway::prepareOrder(request(), response("unknown"),
+        "run-42", "run-42",
         ActorId(17), ActorId(17), 4, allocate), std::invalid_argument);
     EXPECT_EQ(allocations, 0);
 }
