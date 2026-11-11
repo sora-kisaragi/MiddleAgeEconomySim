@@ -25,6 +25,9 @@ public:
         money += amount;
     }
 
+    // Transfer nonnegative funds only when both balances can be updated safely.
+    bool transferMoneyTo(Agent* recipient, int64_t amount);
+
     // Agent interaction methods
     virtual bool canInteractWith(const Agent* other) const {
         return other != nullptr && other != this;
@@ -43,8 +46,6 @@ public:
     size_t getTransactionCount() const;
     void clearOldTransactions(size_t max_history = 1000);
 
-private:
-    bool transferMoneyTo(Agent* recipient, int64_t amount);
 };
 
 #endif // AGENT_H

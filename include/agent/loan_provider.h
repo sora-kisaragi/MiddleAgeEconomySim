@@ -2,6 +2,7 @@
 #ifndef LOAN_PROVIDER_H
 #define LOAN_PROVIDER_H
 
+#include <cmath>
 #include <vector>
 #include "agent.h"
 #include "../market/loan.h"
@@ -14,8 +15,11 @@ public:
     LoanProvider() : base_interest_rate(0.05f) {}
 
     bool provideLoan(Agent* borrower, int64_t amount) {
-        if (!borrower || amount <= 0) return false;
-        if (money < amount) return false;
+        if (!borrower || borrower == this || amount <= 0 ||
+            !std::isfinite(base_interest_rate) || base_interest_rate < 0) return false;
+        if (money < amount || borrower->money > std::numeric_limits<int64_t>::max() - amount) {
+            return false;
+        }
 
         Loan loan;
         loan.lender_id = id;
@@ -25,9 +29,11 @@ public:
         loan.days_remaining = 30;  // 30日の融資期間
         loan.defaulted = false;
 
-        money -= amount;
-        borrower->addMoney(amount);
         active_loans.push_back(loan);
+        if (!transferMoneyTo(borrower, amount)) {
+            active_loans.pop_back();
+            return false;
+        }
 
         return true;
     }
