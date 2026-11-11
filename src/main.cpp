@@ -5,7 +5,7 @@
 #include "system/simulation.h"
 #include "market/price_index.h"
 #include "system/simulation_options.h"
-#include "core/economy_types.h"
+#include "core/actor_registry.h"
 
 int main(int argc, char* argv[]) {
     try {
@@ -77,18 +77,29 @@ int main(int argc, char* argv[]) {
     bakery.money = 1000;
     if (options.scenario == "demo") businesses.push_back(bakery);
 
-    // Use stable configuration keys for the legacy sample's actor references.
-    // The registry in #42 will own these typed IDs for configurable villages.
-    const auto actor_ids = economy::assignStableIds<economy::ActorTag>(
-        {"business:bakery", "business:farm", "institution:government", "institution:lender",
-         "person:farmer", "person:merchant"});
-    government.id = static_cast<int64_t>(actor_ids.at("institution:government").value());
-    loan_provider.id = static_cast<int64_t>(actor_ids.at("institution:lender").value());
-    people[0].id = static_cast<int64_t>(actor_ids.at("person:farmer").value());
-    people[1].id = static_cast<int64_t>(actor_ids.at("person:merchant").value());
-    businesses[0].id = static_cast<int64_t>(actor_ids.at("business:farm").value());
+    // Resolve sample actors through the registry; the legacy Agent API still
+    // receives integer IDs until the settlement and history paths are migrated.
+    std::vector<economy::ActorSpec> actor_specs = {
+        {"business:farm", "農場", economy::ActorKind::Business, "person:farmer"},
+        {"institution:government", "政府", economy::ActorKind::Government},
+        {"institution:lender", "金貸", economy::ActorKind::Lender},
+        {"person:farmer", "農夫", economy::ActorKind::Person},
+        {"person:merchant", "商人", economy::ActorKind::Person}};
     if (options.scenario == "demo") {
-        businesses[1].id = static_cast<int64_t>(actor_ids.at("business:bakery").value());
+        actor_specs.emplace_back("business:bakery", "パン工房", economy::ActorKind::Business,
+                                 "person:merchant");
+    }
+    const auto actor_registry = economy::ActorRegistry::fromSpecs(actor_specs);
+    const auto actor_id = [&](const std::string& key) {
+        return static_cast<int64_t>(actor_registry.actorByKey(key).id.value());
+    };
+    government.id = actor_id("institution:government");
+    loan_provider.id = actor_id("institution:lender");
+    people[0].id = actor_id("person:farmer");
+    people[1].id = actor_id("person:merchant");
+    businesses[0].id = actor_id("business:farm");
+    if (options.scenario == "demo") {
+        businesses[1].id = actor_id("business:bakery");
     }
     
     std::cout << "=== 中世経済シミュレーション開始 ===\n";
