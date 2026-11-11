@@ -5,6 +5,7 @@
 #include "system/simulation.h"
 #include "market/price_index.h"
 #include "system/simulation_options.h"
+#include "core/economy_types.h"
 
 int main(int argc, char* argv[]) {
     try {
@@ -75,6 +76,20 @@ int main(int argc, char* argv[]) {
     bakery.price = 10;
     bakery.money = 1000;
     if (options.scenario == "demo") businesses.push_back(bakery);
+
+    // Use stable configuration keys for the legacy sample's actor references.
+    // The registry in #42 will own these typed IDs for configurable villages.
+    const auto actor_ids = economy::assignStableIds<economy::ActorTag>(
+        {"business:bakery", "business:farm", "institution:government", "institution:lender",
+         "person:farmer", "person:merchant"});
+    government.id = static_cast<int64_t>(actor_ids.at("institution:government").value());
+    loan_provider.id = static_cast<int64_t>(actor_ids.at("institution:lender").value());
+    people[0].id = static_cast<int64_t>(actor_ids.at("person:farmer").value());
+    people[1].id = static_cast<int64_t>(actor_ids.at("person:merchant").value());
+    businesses[0].id = static_cast<int64_t>(actor_ids.at("business:farm").value());
+    if (options.scenario == "demo") {
+        businesses[1].id = static_cast<int64_t>(actor_ids.at("business:bakery").value());
+    }
     
     std::cout << "=== 中世経済シミュレーション開始 ===\n";
     std::cout << "統合システム: 市場・政府・融資・貿易ルート\n\n";
@@ -96,7 +111,8 @@ int main(int argc, char* argv[]) {
 
     // シミュレーション実行
     for (int day = 1; day <= options.days; ++day) {
-        std::cout << "\n=== Day " << day << " ===\n";
+        const economy::GameTime day_start(static_cast<std::uint64_t>(day), 1, 0);
+        std::cout << "\n=== Day " << day_start.day << " ===\n";
         if (!simulateDay(people, businesses, market, government, loan_provider, trade_routes)) {
             std::cerr << "Day " << day << " の処理が完了しなかったため終了します。\n";
             return 1;
