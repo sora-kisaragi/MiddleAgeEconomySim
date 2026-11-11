@@ -157,3 +157,36 @@ TEST(DailyMarketTest, Oversupply_PriceHasPositiveLowerBound) {
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 1);
 }
+
+TEST(DailyMarketTest, UnlistedSeller_SplitRequests_HaveEqualSupplyAndPrice) {
+    Market single;
+    Market split;
+    Person single_buyer;
+    Person split_buyer;
+    single_buyer.money = split_buyer.money = 40000;
+    Business single_seller;
+    Business split_seller;
+    single_seller.stock = split_seller.stock = 100;
+    single_seller.price = split_seller.price = 100;
+    EXPECT_FALSE(single.transact(&single_buyer, &single_seller, "grain", 200));
+    ASSERT_TRUE(split.transact(&split_buyer, &split_seller, "grain", 100));
+    EXPECT_FALSE(split.transact(&split_buyer, &split_seller, "grain", 100));
+    single.clearDaily();
+    split.clearDaily();
+    EXPECT_EQ(single.getPrice("grain"), 110);
+    EXPECT_EQ(split.getPrice("grain"), 110);
+}
+
+TEST(DailyMarketTest, UnlistedSeller_RepeatedShortages_DoNotDuplicateSupply) {
+    Market market;
+    Person buyer;
+    buyer.money = 40000;
+    Business seller;
+    seller.stock = 100;
+    seller.price = 100;
+    EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
+    EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
+    EXPECT_EQ(market.getStock("grain"), 100);
+    market.clearDaily();
+    EXPECT_EQ(market.getPrice("grain"), 130);
+}

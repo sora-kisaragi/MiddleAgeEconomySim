@@ -71,17 +71,15 @@ public:
         
         // 購入者の所持金と売り手の在庫を確認
         if (buyer->money < total_cost) return false;
+
+        // Include the seller's offered stock even when this request cannot be filled.
+        auto& market_stock = stock[product];
+        if (market_stock < seller->stock) {
+            addStock(product, seller->stock - market_stock);
+        }
         if (seller->stock < quantity) {
             addDemand(product, quantity);
             return false;
-        }
-
-        // 市場の在庫を確認と更新
-        auto& market_stock = stock[product];
-        if (market_stock < quantity) {
-            // 市場の在庫が不足している場合は、売り手から補充
-            addStock(product, seller->stock);
-            market_stock = stock[product];
         }
 
         if (market_stock < quantity) {
