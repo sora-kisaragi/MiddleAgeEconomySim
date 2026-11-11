@@ -28,3 +28,11 @@ TEST(SimulationOptionsTest, InvalidArguments_AreRejected) {
         EXPECT_THROW(parseSimulationOptions(arguments), std::invalid_argument);
     }
 }
+
+TEST(SimulationOptionsTest, CsvPath_IsAcceptedWithScenarioAndDays) {
+    const auto options = parseSimulationOptions({"--scenario", "balanced", "--days", "3", "--csv", "observations.csv"});
+    EXPECT_EQ(options.csv_path, "observations.csv");
+    EXPECT_TRUE(parseSimulationOptions({}).csv_path.empty());
+    EXPECT_THROW(parseSimulationOptions({"--csv"}), std::invalid_argument);
+    EXPECT_THROW(parseSimulationOptions({"--csv", ""}), std::invalid_argument);
+}

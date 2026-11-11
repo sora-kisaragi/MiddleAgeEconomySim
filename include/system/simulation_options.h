@@ -4,6 +4,7 @@
 
 struct SimulationOptions {
     std::string scenario = "demo";
+    std::string csv_path;
     int days = 5;
     bool help = false;
 };
