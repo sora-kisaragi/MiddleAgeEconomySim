@@ -86,3 +86,33 @@ TEST_F(DayValidationTest, MaximumAggregateStock_IsAccepted) {
     EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
     EXPECT_EQ(market.getStock("小麦"), std::numeric_limits<int>::max() - 1);
 }
+
+TEST_F(DayValidationTest, InvalidNpcSatisfaction_IsRejectedBeforeMutation) {
+    people.push_back(people[0]);
+    for (int invalid : {-1, 101, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()}) {
+        people[1].satisfaction = invalid;
+        expectRejectedWithoutMutation();
+        EXPECT_EQ(people[1].satisfaction, invalid);
+    }
+}
+
+TEST_F(DayValidationTest, ValidNpcSatisfactionEndpoints_RemainWithinRange) {
+    for (int endpoint : {0, 100}) {
+        people[0].satisfaction = endpoint;
+        people[0].money = 0;
+        EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+        EXPECT_EQ(people[0].satisfaction, std::max(0, endpoint - 5));
+    }
+}
+
+TEST_F(DayValidationTest, ValidNpcSatisfactionEndpoints_WithFoodRemainWithinRange) {
+    people[0].daily_income = 0;
+    for (int endpoint : {0, 100}) {
+        people[0].satisfaction = endpoint;
+        people[0].money = 0;
+        people[0].inventory = {"小麦"};
+        EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+        EXPECT_EQ(people[0].satisfaction, std::min(100, endpoint + 10));
+        EXPECT_TRUE(people[0].inventory.empty());
+    }
+}
