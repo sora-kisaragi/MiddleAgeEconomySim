@@ -62,17 +62,18 @@ public:
     bool transact(Person* buyer, Business* seller, const std::string& product, int quantity) {
         if (!buyer || !seller || quantity <= 0) return false;
         
-        // 商品が市場に存在するか確認
+        if (seller->stock < 0) return false;
         auto price_it = price.find(product);
-        if (price_it == price.end()) {
-            addProduct(product, seller->price); // 新商品として登録
-            price_it = price.find(product);
+        if (price_it == price.end() && (seller->price <= 0 || seller->price > std::numeric_limits<int>::max())) {
+            return false;
         }
-        
-        int total_cost = price_it->second * quantity;
-        
-        // 購入者の所持金と売り手の在庫を確認
-        if (buyer->money < total_cost) return false;
+        const int unit_price = price_it == price.end() ? static_cast<int>(seller->price) : price_it->second;
+        const int64_t total_cost = static_cast<int64_t>(unit_price) * quantity;
+        if (buyer->money < total_cost || seller->money > std::numeric_limits<int64_t>::max() - total_cost) {
+            return false;
+        }
+        if (daily_demand[product] > std::numeric_limits<int64_t>::max() - quantity) return false;
+        if (price_it == price.end()) addProduct(product, unit_price);
 
         // Include the seller's offered stock even when this request cannot be filled.
         auto& market_stock = stock[product];
@@ -80,8 +81,12 @@ public:
         if (seller->stock > listed) {
             const int additional = seller->stock - listed;
             const int assigned = std::min(additional, unassigned_stock[product]);
-            unassigned_stock[product] -= assigned;
             const int newly_offered = additional - assigned;
+            if (market_stock > std::numeric_limits<int>::max() - newly_offered ||
+                daily_supply[product] > std::numeric_limits<int64_t>::max() - newly_offered) {
+                return false;
+            }
+            unassigned_stock[product] -= assigned;
             market_stock += newly_offered;
             daily_supply[product] += newly_offered;
             listed += additional;
@@ -110,10 +115,15 @@ public:
     }
 
     void registerProduct(const std::string& product, int initial_price) {
+        if (initial_price <= 0) throw std::invalid_argument("Price must be positive");
         addProduct(product, initial_price);
     }
 
     bool sell(const std::string& product, int quantity, int price) {
+        if (quantity <= 0 || price <= 0 || getStock(product) > std::numeric_limits<int>::max() - quantity) {
+            return false;
+        }
+        if (daily_supply[product] > std::numeric_limits<int64_t>::max() - quantity) return false;
         if (this->price.find(product) == this->price.end()) {
             addProduct(product, price);
         }
@@ -129,14 +139,18 @@ public:
         if (price_it == price.end()) {
             throw std::invalid_argument("Product not found in market");
         }
-        addDemand(product, quantity);
         if (stock[product] < quantity) {
+            addDemand(product, quantity);
             throw std::invalid_argument("Insufficient stock");
         }
-        int total_cost = price_it->second * quantity;
+        const int64_t total_cost = static_cast<int64_t>(price_it->second) * quantity;
+        if (total_cost > std::numeric_limits<int>::max()) {
+            throw std::overflow_error("Purchase cost exceeds int range");
+        }
+        addDemand(product, quantity);
         stock[product] -= quantity;
         unassigned_stock[product] -= std::min(quantity, unassigned_stock[product]);
-        return total_cost;
+        return static_cast<int>(total_cost);
     }
 
     // Close the day, then carry the remaining goods into the next day's supply.
@@ -172,6 +186,9 @@ private:
     }
 
     void addDemand(const std::string& product, int quantity) {
+        if (daily_demand[product] > std::numeric_limits<int64_t>::max() - quantity) {
+            throw std::overflow_error("Daily demand exceeds int64 range");
+        }
         daily_demand[product] += quantity;
     }
 };
