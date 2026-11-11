@@ -253,3 +253,22 @@ TEST(DailyMarketTest, AnonymousPurchase_ExhaustsMarket_DoesNotRegenerateListedGo
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 130);
 }
+
+TEST(DailyMarketTest, RegisterProduct_ResetsOnlyThatProductsSellerListings) {
+    Market market;
+    Person buyer;
+    buyer.money = 40000;
+    Business farmer;
+    Business artisan;
+    farmer.stock = artisan.stock = 100;
+    farmer.price = artisan.price = 100;
+    ASSERT_TRUE(market.transact(&buyer, &farmer, "grain", 50));
+    ASSERT_TRUE(market.transact(&buyer, &artisan, "tools", 50));
+    market.registerProduct("grain", 100);
+    ASSERT_TRUE(market.transact(&buyer, &farmer, "grain", 25));
+    ASSERT_TRUE(market.transact(&buyer, &artisan, "tools", 25));
+    EXPECT_EQ(market.getStock("grain"), 25);
+    EXPECT_EQ(farmer.stock, 25);
+    EXPECT_EQ(market.getStock("tools"), 25);
+    EXPECT_EQ(artisan.stock, 25);
+}

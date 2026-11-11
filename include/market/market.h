@@ -154,6 +154,9 @@ public:
 
 private:
     void addProduct(const std::string& product, int initial_price) {
+        for (auto& listing : seller_listings) {
+            listing.second.erase(product);
+        }
         price[product] = initial_price;
         opening_price[product] = initial_price;
         stock[product] = 0;
