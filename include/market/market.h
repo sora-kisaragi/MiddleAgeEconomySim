@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 #include "../agent/person.h"
 #include "../market/business.h"
 
@@ -117,6 +118,9 @@ public:
     }
 
     int buy(const std::string& product, int quantity) {
+        if (quantity <= 0) {
+            throw std::invalid_argument("Quantity must be positive");
+        }
         auto price_it = price.find(product);
         if (price_it == price.end()) {
             throw std::invalid_argument("Product not found in market");

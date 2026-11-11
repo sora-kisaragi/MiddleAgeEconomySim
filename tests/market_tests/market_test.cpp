@@ -37,6 +37,26 @@ TEST_F(MarketTest, GetPrice) {
     EXPECT_EQ(market->getPrice("nonexistent"), 0);
 }
 
+TEST_F(MarketTest, Buy_NonPositiveQuantity_ThrowsWithoutChangingState) {
+    for (int quantity : {0, -1}) {
+        SCOPED_TRACE(quantity);
+        Market tested_market;
+        Market control_market;
+        tested_market.sell("grain", 1000, 100);
+        control_market.sell("grain", 1000, 100);
+
+        EXPECT_THROW(tested_market.buy("grain", quantity), std::invalid_argument);
+        EXPECT_EQ(tested_market.getStock("grain"), control_market.getStock("grain"));
+        EXPECT_EQ(tested_market.getPrice("grain"), control_market.getPrice("grain"));
+        EXPECT_FLOAT_EQ(tested_market.getPriceVolatility(), control_market.getPriceVolatility());
+
+        // Rejected purchases must not affect the next valid purchase.
+        EXPECT_EQ(tested_market.buy("grain", 10), control_market.buy("grain", 10));
+        EXPECT_EQ(tested_market.getStock("grain"), control_market.getStock("grain"));
+        EXPECT_EQ(tested_market.getPrice("grain"), control_market.getPrice("grain"));
+    }
+}
+
 TEST_F(MarketTest, UpdatePrice_HighDemand) {
     // Test that prices respond to market conditions
     int initial_price = market->getPrice("grain");
