@@ -110,6 +110,7 @@ TEST(DailyMarketTest, FailedFunding_DoesNotCreateDemand) {
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     seller.stock = 100;
     seller.price = 100;
     market.sell("grain", 100, 100);
@@ -122,6 +123,7 @@ TEST(DailyMarketTest, Transactions_UseOpeningPriceAndAccumulateDemand) {
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     buyer.money = 10000;
     seller.stock = 100;
     seller.price = 100;
@@ -139,6 +141,7 @@ TEST(DailyMarketTest, Transaction_StockShortage_RecordsAffordableDemand) {
     Market market;
     Person buyer;
     Business seller;
+    seller.product = "grain";
     buyer.money = 20000;
     seller.stock = 100;
     seller.price = 100;
@@ -165,7 +168,9 @@ TEST(DailyMarketTest, UnlistedSeller_SplitRequests_HaveEqualSupplyAndPrice) {
     Person split_buyer;
     single_buyer.money = split_buyer.money = 40000;
     Business single_seller;
+    single_seller.product = "grain";
     Business split_seller;
+    split_seller.product = "grain";
     single_seller.stock = split_seller.stock = 100;
     single_seller.price = split_seller.price = 100;
     EXPECT_FALSE(single.transact(&single_buyer, &single_seller, "grain", 200));
@@ -182,6 +187,7 @@ TEST(DailyMarketTest, UnlistedSeller_RepeatedShortages_DoNotDuplicateSupply) {
     Person buyer;
     buyer.money = 40000;
     Business seller;
+    seller.product = "grain";
     seller.stock = 100;
     seller.price = 100;
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
@@ -196,7 +202,9 @@ TEST(DailyMarketTest, MultipleSellers_OfferDistinctSupplyAcrossDays) {
     Person buyer;
     buyer.money = 40000;
     Business first;
+    first.product = "grain";
     Business second;
+    second.product = "grain";
     first.stock = second.stock = 100;
     first.price = second.price = 100;
     for (int expected_price : {110, 121}) {
@@ -214,7 +222,9 @@ TEST(DailyMarketTest, PrelistedSupply_IsAssignedWithoutDoubleCounting) {
     Person buyer;
     buyer.money = 40000;
     Business first;
+    first.product = "grain";
     Business second;
+    second.product = "grain";
     first.stock = second.stock = 100;
     first.price = second.price = 100;
     EXPECT_FALSE(market.transact(&buyer, &first, "grain", 200));
@@ -229,6 +239,7 @@ TEST(DailyMarketTest, Seller_SuccessThenShortage_DoesNotRelistSoldGoods) {
     Person buyer;
     buyer.money = 40000;
     Business seller;
+    seller.product = "grain";
     seller.stock = 100;
     seller.price = 100;
     ASSERT_TRUE(market.transact(&buyer, &seller, "grain", 50));
@@ -244,6 +255,7 @@ TEST(DailyMarketTest, AnonymousPurchase_ExhaustsMarket_DoesNotRegenerateListedGo
     Person buyer;
     buyer.money = 40000;
     Business seller;
+    seller.product = "grain";
     seller.stock = 100;
     seller.price = 100;
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
@@ -259,7 +271,9 @@ TEST(DailyMarketTest, RegisterProduct_ResetsOnlyThatProductsSellerListings) {
     Person buyer;
     buyer.money = 40000;
     Business farmer;
+    farmer.product = "grain";
     Business artisan;
+    artisan.product = "tools";
     farmer.stock = artisan.stock = 100;
     farmer.price = artisan.price = 100;
     ASSERT_TRUE(market.transact(&buyer, &farmer, "grain", 50));
