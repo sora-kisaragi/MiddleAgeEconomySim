@@ -42,6 +42,9 @@ public:
     // Transaction history management
     size_t getTransactionCount() const;
     void clearOldTransactions(size_t max_history = 1000);
+
+private:
+    bool transferMoneyTo(Agent* recipient, int64_t amount);
 };
 
 #endif // AGENT_H
