@@ -64,3 +64,20 @@ TEST(DecisionContractTest, RejectsDuplicateCandidatesAndMalformedIdentity) {
     EXPECT_THROW((DecisionRequest("", "d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
                                   {{"pass", PassAction{"NO_ACTION"}}})), std::invalid_argument);
 }
+
+TEST(DecisionContractTest, AllowsZeroBudgetForFreeQuotesButRequiresQuantity) {
+    const DecisionRequest free_order("run-42", "free-order", hash, ActorId(1), std::nullopt,
+                                    GameTime(1, 8, 0), 0,
+                                    {{"pass", PassAction{"NO_ACTION"}},
+                                     {"free", PlaceOrderAction{IntentId(1), QuoteId(1),
+                                                               Quantity(2), Money(0), false}}});
+    const auto selected = selectCandidate(free_order,
+        {"decision.v1", "free-order", hash, "free", ReasonCode::FoodPriority}, 0);
+    EXPECT_EQ(std::get<PlaceOrderAction>(selected.action).max_amount.value(), 0);
+    EXPECT_THROW((DecisionRequest("run-42", "invalid-order", hash, ActorId(1), std::nullopt,
+                                  GameTime(1, 8, 0), 0,
+                                  {{"pass", PassAction{"NO_ACTION"}},
+                                   {"zero", PlaceOrderAction{IntentId(1), QuoteId(1),
+                                                              Quantity(0), Money(0), false}}})),
+                 std::invalid_argument);
+}
