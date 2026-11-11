@@ -4,6 +4,8 @@ labels: enhancement, phase-1, checklist
 assignees: none
 ---
 
+> 過去の調査資料です。相互作用・統合テスト・CLI サンプルは現行コードにあります。関連する実装は [PR #5](https://github.com/sora-kisaragi/MiddleAgeEconomySim/pull/5) とその後の PR を参照してください。 現在の作業選定には [棚卸し](../development-audit-2026-11-11.md) と GitHub の Issue／PR を参照してください。
+
 ## Description
 Multiple major implementation tasks from the Phase 1 checklist remain incomplete, blocking project progression to Phase 2.
 
@@ -67,4 +69,3 @@ Multiple major implementation tasks from the Phase 1 checklist remain incomplete
 
 ## Priority
 🔴 **Critical** - Blocking Phase 2 development
-

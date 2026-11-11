@@ -10,14 +10,11 @@
   - [プロジェクト概要](#プロジェクト概要)
   - [開発環境](#開発環境)
   - [インストール手順](#インストール手順)
-    - [必要なツール](#必要なツール)
   - [フェーズ1の目標](#フェーズ1の目標)
   - [テスト駆動開発（TDD）](#テスト駆動開発tdd)
   - [プロジェクト構成](#プロジェクト構成)
   - [コンパイル手順](#コンパイル手順)
   - [テスト実行とコードカバレッジの確認](#テスト実行とコードカバレッジの確認)
-    - [テストの実行](#テストの実行)
-    - [コードカバレッジの確認](#コードカバレッジの確認)
   - [使用ライブラリ](#使用ライブラリ)
   - [実行方法](#実行方法)
   - [性能と拡張性](#性能と拡張性)
@@ -33,36 +30,22 @@
 
 シミュレーション内でのエージェント（NPC）は、  
 労働・消費・貯蓄を行い、市場で商品を売買したり,政府から税金を徴収されたりします。  
-システム内では戦争や飢饉などの外的要因が市場に影響を与え、経済がどのように回るかを確認できます。
+現行の CLI では日次の生産・取引・価格変動を観測できます。戦争や飢饉などの経済イベントは設計上の拡張項目です。
 
 ---
 
 ## 開発環境
 
-このプロジェクトは以下の開発環境を使用しています。
-
-- **言語**: C++17
-- **コンパイラ**: gcc 14
-- **ビルドツール**: CMake
-- **テストツール**: Google Test
-- **CI/CD**: GIthub Actions
-- **エディタ**:  VSCode推奨 (GitHub Copilot)
-- **プラットフォーム**: Linux / macOS / Windows (クロスプラットフォーム)
-- **開発手法**: テスト駆動開発（TDD）
+C++17、GCC 14、CMake、GoogleTest 1.14.0 を使います。CI は Ubuntu で動作します。検証済みのツールの組合せと環境ごとの扱いは [貢献ガイド](CONTRIBUTING.md#ビルドと検証) を参照してください。
 
 ---
 
 ## インストール手順
 
-### 必要なツール
-
-- **CMake**: プロジェクトのビルドに使用
-  - [CMake公式サイト](https://cmake.org/download/)
-  
-- **コンパイラ**: C++コンパイラ（GCCやClangを推奨）
-  - Linux: `apt install build-essential`
-  - macOS: Xcode Command Line Tools
-  - Windows: Visual Studioのインストール
+```bash
+git clone https://github.com/sora-kisaragi/MiddleAgeEconomySim.git
+cd MiddleAgeEconomySim
+```
 
 ---
 
@@ -73,8 +56,7 @@
 - エージェントの状態（健康、犯罪傾向など）の管理
 - 貨幣経済シミュレーションの基本的なフロー構築
 
-> 注: フェーズ1では開発速度を優先し、構造体（struct）ベースの実装を行います。  
-> フェーズ2以降で段階的にクラスベースの実装へ移行する予定です。
+> 現行コードでは `Person` などの構造体と `Agent` などのクラスを併用しています。
 >
 > **開発手法**: このプロジェクトはテスト駆動開発（TDD）を採用し、機能実装の前に
 > テストを作成することで品質と設計の整合性を確保します。
@@ -97,7 +79,7 @@ TDDを採用することで、以下のメリットを得られます：
 - リファクタリングの安全性向上
 - ドキュメントとしてのテスト
 
-詳細は[テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing-Guidelines.md)をご参照ください。
+詳細は[テストの実施方法](wiki/Testing%E2%80%90Guidelines.md)をご参照ください。
 
 ---
 
@@ -137,84 +119,30 @@ Github Copilotにシステム要件を認識させるためにこちらのプロ
 
 ## コンパイル手順
 
-1. **ソースコードをクローン**
+リポジトリのルートで実行します。
 
-   ```bash
-   git clone https://github.com/sora-kisaragi/MiddleAgeEconomySim.git
-   cd MiddleAgeEconomySim
-   ```
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+```
 
-2. **ビルドディレクトリを作成**
-
-   ```bash
-   mkdir build
-   cd build
-   ```
-
-3. **CMakeでビルド設定**
-
-   ```bash
-   cmake ..
-   ```
-
-4. **プロジェクトをビルド**
-
-   ```bash
-   make
-   ```
+GoogleTest の取得に失敗した場合は [貢献ガイド](CONTRIBUTING.md#ビルドと検証) のローカル依存指定を参照してください。
 
 ---
 
 ## テスト実行とコードカバレッジの確認
 
-### テストの実行
-
-ビルド後、以下のコマンドでテストを実行できます。
-
 ```bash
-cd build
-ctest --output-on-failure
+ctest --test-dir build --output-on-failure
 ```
 
-### コードカバレッジの確認
-
-> **注意**: フェーズ1ではコードカバレッジ収集を行いません。以下の手順はフェーズ2以降で適用されます。
-
-コードカバレッジを確認するには、以下の手順に従ってください。
-
-1. **カバレッジオプションを有効にしてビルド**
-    ```bash
-    mkdir -p build && cd build
-    cmake -DCODE_COVERAGE=ON -DPHASE_1=FALSE ..
-    make
-    ```
-2. **テスト実行後、カバレッジレポートを生成**
-    ```bash
-    ctest
-    make coverage
-    ```
-3. **レポートの確認**
-  生成されたHTMLレポートをブラウザで開きます
-    ```bash
-    # macOS
-    open coverage/index.html
-    # Linux
-    xdg-open coverage/index.html
-    # Windows
-    start coverage\index.html
-    ```
-
-> **注意**: コードカバレッジの機能を正しく動作させるには、GCCコンパイラが必要です。
-> システムによってはデフォルトのコンパイラがClangなどの場合があるため、
-> CMakeの設定でGCCを明示的に指定しています。
-
-詳細なテスト方法については、[テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)を参照してください。
+フェーズ1の構成ではコードカバレッジ収集は無効です。CTest は登録済みテストの合否を確認します。
 
 ---
 
 ## 使用ライブラリ
 
-このプロジェクトでは、特定の外部ライブラリを使用していませんが、必要に応じて後で追加する可能性があります。
+CLI は C++ 標準ライブラリを使用します。テストの構成時に CMake が GoogleTest 1.14.0 を取得します。
 
 ---
 
@@ -223,22 +151,22 @@ ctest --output-on-failure
 コンパイル後、以下のコマンドでシミュレーションを実行できます。
 
 ```bash
-./MiddleAgeEconomySim
+./build/MiddleAgeEconomySim
 ```
 
 同じ初期条件で価格の推移を比較できます。日末には物価指数と前日比、終了時には総資金を表示します。
 
 ```bash
-./MiddleAgeEconomySim --scenario balanced --days 3
-./MiddleAgeEconomySim --scenario shortage --days 3
-./MiddleAgeEconomySim --scenario oversupply --days 3
+./build/MiddleAgeEconomySim --scenario balanced --days 3
+./build/MiddleAgeEconomySim --scenario shortage --days 3
+./build/MiddleAgeEconomySim --scenario oversupply --days 3
 ```
 
 比較シナリオは小麦を基準100とする固定バスケットです。3日間の指数は、均衡で100・100・100、品不足で110・120・130、供給過剰で90・80・70となります。
 `--csv PATH` で日次観測を保存できます（指定したファイルは上書きします）。
 
 ```bash
-./MiddleAgeEconomySim --scenario shortage --days 30 --csv shortage.csv
+./build/MiddleAgeEconomySim --scenario shortage --days 30 --csv shortage.csv
 ```
 
 CSVの列は `day,price_index,change_percent,total_money` です。ヘッダに続いて完了した日を1行ずつ保存します。前日比の単位は%、初日の基準指数は100です。ファイルを開けない場合や書込失敗は非0で終了し、中断した日の行は出力しません。
@@ -251,27 +179,21 @@ CSVの列は `day,price_index,change_percent,total_money` です。ヘッダに�
 
 ## 性能と拡張性
 
-このシミュレーションは以下の特性を考慮して設計されています：
-
-- **スケーラビリティ**: 小規模（村レベル）から大規模（国家レベル）へ段階的に拡張可能
-- **パフォーマンス**: 大量のエージェント処理に対応するため、影響の少ないNPCをグループ化
-- **安定性**: 価格の急激な変動を防ぐための緩衝メカニズム実装
-- **拡張性**: 新しいエージェントタイプやイベントを容易に追加できる設計
+商品ごとの価格更新には価格の上下限と整数丸めがあります。地域間物流、イベント、大規模な NPC 処理は拡張項目です。現行のシナリオと検証規模は [開発・検証レポート](docs/reports/2026-11-11/README.md) を参照してください。
 
 ---
 
 ## ドキュメント
 
-開発ドキュメントはwikiフォルダ内とGitHub Wikiの両方に同期して管理されています。  
-どちらで編集しても自動的に同期されるため、ローカル環境でもGitHub上でも  
-ドキュメントを編集できます。
+設計書と規約はリポジトリ内の `wiki/` を参照してください。公開 GitHub Wiki への同期状況は [Issue #27](https://github.com/sora-kisaragi/MiddleAgeEconomySim/issues/27) と実行結果で確認できます。
 
-- [要件定義書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Requirement)
-- [基本設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/High_Level_Design)
-- [詳細設計書](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Low_Level_Design)
-- [ブランチ戦略](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Branch%E2%80%90Strategy)
-- [コーディング規約](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Coding%E2%80%90Standards)
-- [テストの実施方法](https://github.com/sora-kisaragi/MiddleAgeEconomySim/wiki/Testing%E2%80%90Guidelines)
+- [要件定義書](wiki/Requirement.md)
+- [基本設計書](wiki/High_Level_Design.md)
+- [詳細設計書](wiki/Low_Level_Design.md)
+- [ブランチ戦略](wiki/Branch%E2%80%90Strategy.md)
+- [コーディング規約](wiki/Coding%E2%80%90Standards.md)
+- [テスト規約](wiki/Testing%E2%80%90Guidelines.md)
+- [貢献ガイド](CONTRIBUTING.md)
 
 ---
 
