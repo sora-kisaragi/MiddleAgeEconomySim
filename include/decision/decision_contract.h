@@ -36,7 +36,32 @@ struct Candidate {
 };
 
 inline bool validDecisionId(const std::string& id) {
-    return !id.empty() && id.size() <= 128;
+    std::size_t characters = 0;
+    for (std::size_t i = 0; i < id.size();) {
+        const auto lead = static_cast<unsigned char>(id[i++]);
+        std::uint32_t cp = lead;
+        unsigned int continuation = 0;
+        std::uint32_t minimum = 0;
+        if (lead >= 0xc2 && lead <= 0xdf) {
+            cp = lead & 0x1f; continuation = 1; minimum = 0x80;
+        } else if (lead >= 0xe0 && lead <= 0xef) {
+            cp = lead & 0x0f; continuation = 2; minimum = 0x800;
+        } else if (lead >= 0xf0 && lead <= 0xf4) {
+            cp = lead & 0x07; continuation = 3; minimum = 0x10000;
+        } else if (lead >= 0x80) {
+            return false;
+        }
+        if (i + continuation > id.size()) return false;
+        for (unsigned int n = 0; n < continuation; ++n) {
+            const auto tail = static_cast<unsigned char>(id[i++]);
+            if ((tail & 0xc0) != 0x80) return false;
+            cp = (cp << 6) | (tail & 0x3f);
+        }
+        if (cp < minimum || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff) ||
+            cp < 0x20 || cp == 0x7f || (cp >= 0x80 && cp <= 0x9f)) return false;
+        if (++characters > 128) return false;
+    }
+    return characters != 0;
 }
 
 inline bool validHash(const std::string& hash) {
