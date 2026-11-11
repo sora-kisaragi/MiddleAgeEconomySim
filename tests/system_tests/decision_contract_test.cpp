@@ -8,7 +8,7 @@ namespace {
 const std::string hash(64, 'a');
 
 DecisionRequest request() {
-    return DecisionRequest("day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
+    return DecisionRequest("run-42", "day8-phase08-actor17-food-attempt1", hash, ActorId(17), ActorId(17),
                            GameTime(8, 8, 1), 4,
                            {{"pass", PassAction{"NO_ACTION"}},
                             {"buy", PlaceOrderAction{IntentId(91), QuoteId(40), Quantity(3), Money(30), true}}});
@@ -50,15 +50,17 @@ TEST(DecisionContractTest, RejectsMismatchedAndUnknownResponses) {
 }
 
 TEST(DecisionContractTest, RejectsDuplicateCandidatesAndMalformedIdentity) {
-    EXPECT_THROW((DecisionRequest("d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
+    EXPECT_THROW((DecisionRequest("run-42", "d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
                                   {{"same", PassAction{"NO_ACTION"}}, {"same", PassAction{"NO_ACTION"}}})),
                  std::invalid_argument);
-    EXPECT_THROW((DecisionRequest("d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
+    EXPECT_THROW((DecisionRequest("run-42", "d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
                                   {{"order", PlaceOrderAction{IntentId(1), QuoteId(1), Quantity(1), Money(1), false}}})),
                  std::invalid_argument);
-    EXPECT_THROW((DecisionRequest("d", std::string(64, 'G'), ActorId(1), std::nullopt,
+    EXPECT_THROW((DecisionRequest("run-42", "d", std::string(64, 'G'), ActorId(1), std::nullopt,
                                   GameTime(1, 2, 0), 0, {{"pass", PassAction{"NO_ACTION"}}})),
                  std::invalid_argument);
-    EXPECT_THROW((DecisionRequest("d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
+    EXPECT_THROW((DecisionRequest("run-42", "d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
                                   {{"pass", PassAction{""}}})), std::invalid_argument);
+    EXPECT_THROW((DecisionRequest("", "d", hash, ActorId(1), std::nullopt, GameTime(1, 2, 0), 0,
+                                  {{"pass", PassAction{"NO_ACTION"}}})), std::invalid_argument);
 }

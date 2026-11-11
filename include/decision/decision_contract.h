@@ -77,13 +77,14 @@ inline bool validHash(const std::string& hash) {
 // The remaining action kinds and serialized JSON contract are subsequent #89 work.
 class DecisionRequest {
 public:
-    DecisionRequest(std::string decision_id, std::string input_hash, ActorId actor_id,
+    DecisionRequest(std::string run_id, std::string decision_id, std::string input_hash, ActorId actor_id,
                     std::optional<ActorId> controller_person_id, GameTime time,
                     std::uint64_t state_version, std::vector<Candidate> candidates)
-        : decision_id_(std::move(decision_id)), input_hash_(std::move(input_hash)),
+        : run_id_(std::move(run_id)), decision_id_(std::move(decision_id)), input_hash_(std::move(input_hash)),
           actor_id_(actor_id), controller_person_id_(controller_person_id), time_(time),
           state_version_(state_version), candidates_(std::move(candidates)) {
-        if (!validDecisionId(decision_id_) || !validHash(input_hash_) || candidates_.empty()) {
+        if (!validDecisionId(run_id_) || !validDecisionId(decision_id_) ||
+            !validHash(input_hash_) || candidates_.empty()) {
             throw std::invalid_argument("invalid decision request identity or empty candidates");
         }
         std::set<std::string> ids;
@@ -105,6 +106,7 @@ public:
         if (!has_pass) throw std::invalid_argument("decision needs a PASS candidate");
     }
 
+    const std::string& runId() const noexcept { return run_id_; }
     const std::string& decisionId() const noexcept { return decision_id_; }
     const std::string& inputHash() const noexcept { return input_hash_; }
     ActorId actorId() const noexcept { return actor_id_; }
@@ -114,6 +116,7 @@ public:
     const std::vector<Candidate>& candidates() const noexcept { return candidates_; }
 
 private:
+    const std::string run_id_;
     const std::string decision_id_;
     const std::string input_hash_;
     const ActorId actor_id_;
