@@ -1,5 +1,7 @@
 # GitHub Issues Ready for Creation
 
+> 過去の調査資料です。記載の未実装判定や Issue 作成例は当時の記録です。 現在の作業選定には [棚卸し](development-audit-2026-11-11.md) と GitHub の Issue／PR を参照してください。
+
 Based on the comprehensive issue detection analysis, the following GitHub issues are ready to be created. Each issue has been thoroughly analyzed with detailed descriptions, reproduction steps, and proposed solutions.
 
 ## 🔴 Critical Priority Issues

@@ -1,5 +1,7 @@
 # 課題検出・追跡システム (Issue Detection & Tracking System)
 
+> 過去の調査資料です。記載の `/tmp/analyze_issues.py` はリポジトリに含まれず、監視ワークフローは導入されていません。 現在の作業選定には [棚卸し](development-audit-2026-11-11.md) と GitHub の Issue／PR を参照してください。
+
 ## 概要
 
 このシステムは、MiddleAgeEconomySimプロジェクトにおいて、現状の課題と問題点を自動検出し、実施したいタスクのブロッカーを体系的に追跡するためのツールです。
