@@ -118,7 +118,7 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
         }
         
         // 満足度の更新（簡易版）
-        if (!person.inventory.empty()) {
+        if (person.removeInventoryItem(food)) {
             int satisfaction_increase = 10;
             person.setSatisfaction(std::min(100, person.satisfaction + satisfaction_increase));
             std::cout << person.name << "の満足度が" << satisfaction_increase << "ポイント上昇し、" 
@@ -129,7 +129,6 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
             std::cout << person.name << "の満足度が" << satisfaction_decrease << "ポイント低下し、" 
                      << person.satisfaction << "になりました。\n";
         }
-        person.inventory.clear();
     }
     
     // 政府の政策実施
