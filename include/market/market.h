@@ -3,7 +3,9 @@
 
 #include <string>
 #include <map>
-#include <vector>
+#include <cstdint>
+#include <cmath>
+#include <limits>
 #include <algorithm>
 #include <stdexcept>
 #include "../agent/person.h"
@@ -13,11 +15,13 @@ class Market {
 private:
     std::map<std::string, int> stock;
     std::map<std::string, int> price;
-    std::map<std::string, std::vector<int>> demand_history;
-    std::map<std::string, std::vector<int>> supply_history;
+    std::map<std::string, int64_t> daily_demand;
+    std::map<std::string, int64_t> daily_supply;
+    std::map<std::string, int> opening_price;
+    std::map<std::string, int> unassigned_stock;
+    std::map<const Business*, std::map<std::string, int>> seller_listings;
     float price_volatility;
     
-    static const size_t MAX_HISTORY_SIZE = 100;  // Limit history to prevent memory leaks
     static constexpr float MAX_VOLATILITY = 2.0f;    // Cap volatility to prevent instability
 
 public:
@@ -40,25 +44,19 @@ public:
         return it != stock.end() ? it->second : 0;
     }
 
+    // Explicit recalculation uses the day's opening price, so repeated calls are idempotent.
     void updatePrice(const std::string& product) {
-        auto& supply_hist = supply_history[product];
-        auto& demand_hist = demand_history[product];
-        
-        if (supply_hist.empty() || demand_hist.empty()) {
-            return;
-        }
+        auto initial = opening_price.find(product);
+        if (initial == opening_price.end()) return;
+        const int64_t supply = daily_supply[product];
+        const int64_t demand = daily_demand[product];
+        if (supply == 0 && demand == 0) return;
 
-        int current_supply = supply_hist.back();
-        int current_demand = demand_hist.back();
-        
-        if (current_supply == 0) return;
-
-        float demand_supply_ratio = static_cast<float>(current_demand) / current_supply;
-        float price_change = (demand_supply_ratio - 1.0f) * price_volatility;
-        
-        auto& current_price = price[product];
-        current_price = static_cast<int>(current_price * (1.0f + price_change));
-        if (current_price < 1) current_price = 1;
+        const double change = static_cast<double>(price_volatility) *
+            (static_cast<double>(demand) - supply) / std::max<int64_t>(1, supply);
+        const double next_price = initial->second * (1.0 + change);
+        price[product] = static_cast<int>(std::round(std::clamp(
+            next_price, 1.0, static_cast<double>(std::numeric_limits<int>::max()))));
     }
 
     bool transact(Person* buyer, Business* seller, const std::string& product, int quantity) {
@@ -74,19 +72,27 @@ public:
         int total_cost = price_it->second * quantity;
         
         // 購入者の所持金と売り手の在庫を確認
-        if (buyer->money < total_cost || seller->stock < quantity) {
+        if (buyer->money < total_cost) return false;
+
+        // Include the seller's offered stock even when this request cannot be filled.
+        auto& market_stock = stock[product];
+        auto& listed = seller_listings[seller][product];
+        if (seller->stock > listed) {
+            const int additional = seller->stock - listed;
+            const int assigned = std::min(additional, unassigned_stock[product]);
+            unassigned_stock[product] -= assigned;
+            const int newly_offered = additional - assigned;
+            market_stock += newly_offered;
+            daily_supply[product] += newly_offered;
+            listed += additional;
+        }
+        if (seller->stock < quantity) {
+            addDemand(product, quantity);
             return false;
         }
 
-        // 市場の在庫を確認と更新
-        auto& market_stock = stock[product];
         if (market_stock < quantity) {
-            // 市場の在庫が不足している場合は、売り手から補充
-            addStock(product, seller->stock);
-            market_stock = stock[product];
-        }
-
-        if (market_stock < quantity) {
+            addDemand(product, quantity);
             return false;
         }
 
@@ -94,13 +100,11 @@ public:
         buyer->addMoney(-total_cost);
         seller->addMoney(total_cost);
         seller->stock -= quantity;
+        listed -= quantity;
         market_stock -= quantity;
 
         // 取引履歴の更新
         addDemand(product, quantity);
-        
-        // 価格更新
-        updatePrice(product);
 
         return true;
     }
@@ -125,92 +129,50 @@ public:
         if (price_it == price.end()) {
             throw std::invalid_argument("Product not found in market");
         }
+        addDemand(product, quantity);
         if (stock[product] < quantity) {
             throw std::invalid_argument("Insufficient stock");
         }
         int total_cost = price_it->second * quantity;
         stock[product] -= quantity;
-        addDemand(product, quantity);
-        updatePrice(product);
+        unassigned_stock[product] -= std::min(quantity, unassigned_stock[product]);
         return total_cost;
     }
 
+    // Close the day, then carry the remaining goods into the next day's supply.
     void clearDaily() {
-        // 日次の統計情報をリセット
-        for (auto& [product, history] : supply_history) {
-            if (!history.empty()) {
-                history.clear();
-                history.push_back(0);
-            }
+        for (const auto& entry : price) {
+            const auto& product = entry.first;
+            updatePrice(product);
+            opening_price[product] = price[product];
+            daily_demand[product] = 0;
+            daily_supply[product] = stock[product];
+            unassigned_stock[product] = stock[product];
         }
-        for (auto& [product, history] : demand_history) {
-            if (!history.empty()) {
-                history.clear();
-                history.push_back(0);
-            }
-        }
+        seller_listings.clear();
     }
 
 private:
     void addProduct(const std::string& product, int initial_price) {
+        for (auto& listing : seller_listings) {
+            listing.second.erase(product);
+        }
         price[product] = initial_price;
+        opening_price[product] = initial_price;
         stock[product] = 0;
-        if (demand_history.find(product) == demand_history.end()) {
-            demand_history[product] = std::vector<int>();
-            demand_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
-            demand_history[product].push_back(0);  // 初期需要を0として記録
-        }
-        if (supply_history.find(product) == supply_history.end()) {
-            supply_history[product] = std::vector<int>();
-            supply_history[product].reserve(MAX_HISTORY_SIZE);  // Reserve space for efficiency
-            supply_history[product].push_back(0);  // 初期供給を0として記録
-        }
+        daily_demand[product] = 0;
+        daily_supply[product] = 0;
+        unassigned_stock[product] = 0;
     }
 
     void addStock(const std::string& product, int quantity) {
-        if (stock.find(product) == stock.end()) {
-            stock[product] = 0;
-        }
         stock[product] += quantity;
-        if (supply_history.find(product) == supply_history.end()) {
-            supply_history[product] = std::vector<int>();
-        }
-        supply_history[product].push_back(quantity);
-        
-        // Limit history size to prevent memory leaks
-        if (supply_history[product].size() > MAX_HISTORY_SIZE) {
-            supply_history[product].erase(supply_history[product].begin());
-        }
-        
-        // 需要と供給の不均衡をチェック
-        if (!demand_history[product].empty()) {
-            int latest_demand = demand_history[product].back();
-            if (quantity < latest_demand) {
-                // Fix: Add volatility incrementally with bounds instead of multiplication
-                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
-            }
-        }
+        unassigned_stock[product] += quantity;
+        daily_supply[product] += quantity;
     }
 
     void addDemand(const std::string& product, int quantity) {
-        if (demand_history.find(product) == demand_history.end()) {
-            demand_history[product] = std::vector<int>();
-        }
-        demand_history[product].push_back(quantity);
-
-        // Limit history size to prevent memory leaks
-        if (demand_history[product].size() > MAX_HISTORY_SIZE) {
-            demand_history[product].erase(demand_history[product].begin());
-        }
-
-        // 需要が供給を上回る場合、価格変動性を増加
-        if (!supply_history[product].empty()) {
-            int latest_supply = supply_history[product].back();
-            if (quantity > latest_supply) {
-                // Fix: Add volatility incrementally with bounds instead of multiplication
-                price_volatility = std::min(price_volatility + 0.01f, MAX_VOLATILITY);
-            }
-        }
+        daily_demand[product] += quantity;
     }
 };
 

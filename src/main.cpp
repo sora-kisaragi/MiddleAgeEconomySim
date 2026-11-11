@@ -92,7 +92,7 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
         // 消費活動（例：食料を購入）
         const std::string food = "小麦";
         try {
-            if (market.getStock(food) > 0 && person.money >= market.getPrice(food)) {
+            if (market.getPrice(food) > 0 && person.money >= market.getPrice(food)) {
                 int64_t cost = market.buy(food, 1);
                 person.money -= cost;
                 person.inventory.push_back(food);
@@ -137,6 +137,9 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
         }
     }
     
+    // 日末に需給を集計し、翌日の価格を決定
+    market.clearDaily();
+
     // 市場の状況を表示
     std::cout << "\n=== 市場の状況 ===\n";
     for (const auto& product : {"小麦", "パン", "道具"}) {
@@ -152,8 +155,6 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     std::cout << "政府の資金: " << government.money << "コイン\n";
     std::cout << "政府の支持率: " << government.approval_rating << "%\n";
     
-    // 市場の日次更新
-    market.clearDaily();
     
     } catch (const std::exception& e) {
         std::cerr << "シミュレーション中に重大なエラーが発生しました: " << e.what() << "\n";
