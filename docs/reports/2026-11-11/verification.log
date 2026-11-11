@@ -1,0 +1,29 @@
+Source commit: 24c991f93890bcf6f665d5098c2745316958a0ee
+Work date: 2026-11-11 JST
+GCC 14.2.0 / C++17 / CMake 3.31.6 / GTest 1.14.0
+
+Normal Debug: ctest --test-dir ../build-report-2h --output-on-failure
+179/179 Test #179: TradeRouteTest.MultipleGoods ....................................................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 179
+
+Total Test time (real) =   1.56 sec
+
+BUILD_MAIN=OFF: ctest --test-dir ../build-final-main-off --output-on-failure
+173/173 Test #173: TradeRouteTest.MultipleGoods ....................................................   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 173
+
+Total Test time (real) =   1.49 sec
+
+ASan+UBSan+float-cast-overflow: ASAN_OPTIONS=detect_leaks=0 ctest --test-dir ../build-final-asan --output-on-failure
+179/179 Test #179: TradeRouteTest.MultipleGoods ....................................................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 179
+
+Total Test time (real) =   5.08 sec
+
+Leak checking NOT verified: initial LeakSanitizer execution failed in this environment with: LeakSanitizer does not work under ptrace (strace, gdb, etc). Supported ASan runs explicitly disabled leak detection.
+
+Experiment: tools/observe_scenarios.py --days 100 --plot
+All three scenarios: exit=0, stderr empty, 100 CSV rows each, initial/final/daily cash=7000. Index and daily change matched independent recomputation from CLI market prices. See observations.json for binary SHA256 and measured results.

@@ -1,0 +1,74 @@
+{
+  "source_commit": "24c991f93890bcf6f665d5098c2745316958a0ee",
+  "observed_at_jst": "2026-11-11T10:05:41.356139+09:00",
+  "binary_sha256": "5300402bd853b186cff01bcc1ceea4327398f8971b4661379e0e52f364e72d55",
+  "days": 100,
+  "scenarios": {
+    "balanced": {
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "observations": 100,
+      "first_three_indices": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "last_index": 100.0,
+      "max_index": 100.0,
+      "max_index_day": 1,
+      "min_index": 100.0,
+      "min_index_day": 1,
+      "initial_cash": 7000,
+      "final_cash": 7000,
+      "purchase_count": 200,
+      "purchase_value": 2000,
+      "wage_value": 7880,
+      "hungry_person_days": 0,
+      "loan_count": 0
+    },
+    "shortage": {
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "observations": 100,
+      "first_three_indices": [
+        110.00000000000001,
+        120.0,
+        130.0
+      ],
+      "last_index": 1160.0,
+      "max_index": 1580.0,
+      "max_index_day": 37,
+      "min_index": 110.00000000000001,
+      "min_index_day": 1,
+      "initial_cash": 7000,
+      "final_cash": 7000,
+      "purchase_count": 100,
+      "purchase_value": 10275,
+      "wage_value": 12760,
+      "hungry_person_days": 100,
+      "loan_count": 0
+    },
+    "oversupply": {
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "observations": 100,
+      "first_three_indices": [
+        90.0,
+        80.0,
+        70.0
+      ],
+      "last_index": 50.0,
+      "max_index": 90.0,
+      "max_index_day": 1,
+      "min_index": 50.0,
+      "min_index_day": 5,
+      "initial_cash": 7000,
+      "final_cash": 7000,
+      "purchase_count": 200,
+      "purchase_value": 1030,
+      "wage_value": 6920,
+      "hungry_person_days": 0,
+      "loan_count": 0
+    }
+  }
+}
