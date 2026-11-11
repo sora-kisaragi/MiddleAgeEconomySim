@@ -1,6 +1,6 @@
 # 開発指示・規約と実装の棚卸し
 
-確認日 2026-11-11（JST）。対象は [main `0e8440e06ad0094c6e788011cf138627ca6b4232`](https://github.com/sora-kisaragi/MiddleAgeEconomySim/tree/0e8440e06ad0094c6e788011cf138627ca6b4232) です。確認時の未解決 Issue は [#27](https://github.com/sora-kisaragi/MiddleAgeEconomySim/issues/27) と [#38](https://github.com/sora-kisaragi/MiddleAgeEconomySim/issues/38) で、公開済みの進行中 PR や #27 と特定できる作業ブランチは見つかりませんでした。
+確認日 2026-11-11（JST）。対象は [main `0e8440e06ad0094c6e788011cf138627ca6b4232`](https://github.com/sora-kisaragi/MiddleAgeEconomySim/tree/0e8440e06ad0094c6e788011cf138627ca6b4232) です。確認時の未解決 Issue は [#27](https://github.com/sora-kisaragi/MiddleAgeEconomySim/issues/27) と [#38](https://github.com/sora-kisaragi/MiddleAgeEconomySim/issues/38) で、棚卸し開始時点で進行中の PR はありませんでした。PR 作成後に確認した #27 の作業ブランチ `fix/issue-27-wiki-sync` は、その時点で同じ main を指していました。
 
 ## 指示の所在と扱い
 

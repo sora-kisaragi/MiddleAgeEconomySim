@@ -54,14 +54,15 @@ g++-14 -std=c++17 -Iinclude src/main.cpp src/agent.cpp src/simulation.cpp \
   src/simulation_options.cpp -o build-cli-only/MiddleAgeEconomySim
 ```
 
-以下は標準ビルドの CLI 確認例です。ローカル GoogleTest を使った場合は実行ファイルのパスを `build-local-gtest/`、直接ビルドでは `build-cli-only/` に読み替えます。
+以下は標準ビルドの CLI 確認例です。ローカル GoogleTest を使った場合は `build_dir=build-local-gtest`、直接ビルドの場合は `build_dir=build-cli-only` に変更します。実行ファイルと CSV の出力先に同じディレクトリを使います。
 
 ```bash
-./build/MiddleAgeEconomySim --help
-./build/MiddleAgeEconomySim --scenario balanced --days 3
-./build/MiddleAgeEconomySim --scenario shortage --days 3 --csv build/shortage.csv
-./build/MiddleAgeEconomySim --scenario oversupply --days 3
-./build/MiddleAgeEconomySim --days 0
+build_dir=build
+"$build_dir/MiddleAgeEconomySim" --help
+"$build_dir/MiddleAgeEconomySim" --scenario balanced --days 3
+"$build_dir/MiddleAgeEconomySim" --scenario shortage --days 3 --csv "$build_dir/shortage.csv"
+"$build_dir/MiddleAgeEconomySim" --scenario oversupply --days 3
+"$build_dir/MiddleAgeEconomySim" --days 0
 ```
 
 3日間の指数の期待値は順に `100, 100, 100`、`110, 120, 130`、`90, 80, 70` です。正常系は終了コード0、CSVはヘッダと完了した3日分、`--days 0` は非0を確認します。CLI のみ確認した場合は CTest 未実行と記録します。フェーズ1の CMake 設定ではコードカバレッジ収集が無効です。テストの合否・件数、レビュー結果、カバレッジ計測は別々に記録します。
