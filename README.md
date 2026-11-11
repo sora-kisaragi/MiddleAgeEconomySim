@@ -226,6 +226,18 @@ ctest --output-on-failure
 ./MiddleAgeEconomySim
 ```
 
+同じ初期条件で価格の推移を比較できます。日末には物価指数と前日比、終了時には総資金を表示します。
+
+```bash
+./MiddleAgeEconomySim --scenario balanced --days 3
+./MiddleAgeEconomySim --scenario shortage --days 3
+./MiddleAgeEconomySim --scenario oversupply --days 3
+```
+
+比較シナリオは小麦を基準100とする固定バスケットです。3日間の指数は、均衡で100・100・100、品不足で110・120・130、供給過剰で90・80・70となります。
+`--help` で指定可能な引数を確認できます。引数なしでは小麦とパンの5日間デモを実行します。
+
+
 ---
 
 ## 性能と拡張性
