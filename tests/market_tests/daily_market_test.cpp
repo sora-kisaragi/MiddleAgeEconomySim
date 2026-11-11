@@ -190,3 +190,66 @@ TEST(DailyMarketTest, UnlistedSeller_RepeatedShortages_DoNotDuplicateSupply) {
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 130);
 }
+
+TEST(DailyMarketTest, MultipleSellers_OfferDistinctSupplyAcrossDays) {
+    Market market;
+    Person buyer;
+    buyer.money = 40000;
+    Business first;
+    Business second;
+    first.stock = second.stock = 100;
+    first.price = second.price = 100;
+    for (int expected_price : {110, 121}) {
+        EXPECT_FALSE(market.transact(&buyer, &first, "grain", 200));
+        EXPECT_FALSE(market.transact(&buyer, &second, "grain", 200));
+        EXPECT_EQ(market.getStock("grain"), 200);
+        market.clearDaily();
+        EXPECT_EQ(market.getPrice("grain"), expected_price);
+    }
+}
+
+TEST(DailyMarketTest, PrelistedSupply_IsAssignedWithoutDoubleCounting) {
+    Market market;
+    market.sell("grain", 200, 100);
+    Person buyer;
+    buyer.money = 40000;
+    Business first;
+    Business second;
+    first.stock = second.stock = 100;
+    first.price = second.price = 100;
+    EXPECT_FALSE(market.transact(&buyer, &first, "grain", 200));
+    EXPECT_FALSE(market.transact(&buyer, &second, "grain", 200));
+    EXPECT_EQ(market.getStock("grain"), 200);
+    market.clearDaily();
+    EXPECT_EQ(market.getPrice("grain"), 110);
+}
+
+TEST(DailyMarketTest, Seller_SuccessThenShortage_DoesNotRelistSoldGoods) {
+    Market market;
+    Person buyer;
+    buyer.money = 40000;
+    Business seller;
+    seller.stock = 100;
+    seller.price = 100;
+    ASSERT_TRUE(market.transact(&buyer, &seller, "grain", 50));
+    EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 100));
+    EXPECT_EQ(market.getStock("grain"), 50);
+    EXPECT_EQ(seller.stock, 50);
+    market.clearDaily();
+    EXPECT_EQ(market.getPrice("grain"), 105);
+}
+
+TEST(DailyMarketTest, AnonymousPurchase_ExhaustsMarket_DoesNotRegenerateListedGoods) {
+    Market market;
+    Person buyer;
+    buyer.money = 40000;
+    Business seller;
+    seller.stock = 100;
+    seller.price = 100;
+    EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
+    market.buy("grain", 100);
+    EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 100));
+    EXPECT_EQ(market.getStock("grain"), 0);
+    market.clearDaily();
+    EXPECT_EQ(market.getPrice("grain"), 130);
+}

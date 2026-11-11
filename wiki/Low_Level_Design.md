@@ -186,8 +186,9 @@ classDiagram
     class Market {
         map<string, int> stock
         map<string, int> price
-        map<string, int> demand_history
-        map<string, int> supply_history
+        map<string, int64_t> daily_demand
+        map<string, int64_t> daily_supply
+        map<string, int> opening_price
         float price_volatility
 
         int getPrice(string item)
@@ -312,6 +313,9 @@ sequenceDiagram
    - 日中の約定価格は当日の開始価格に固定し、`clearDaily()` で翌日の価格を決定する。
    - 供給量は開始時の持越在庫と当日の入荷数量の合計とする。
    - 需要量は正数の購入希望数量の合計とし、在庫不足で不成立となった希望も含める。不正数量・未知の商品・資金不足は含めない。同じ希望を再送すると別の需要として集計される。
+   - `transact()` の遅延出品は売り手別・商品別に管理する。既出品の市場在庫を先に割り当て、追加分だけ供給に算入する。同じ売り手の再送で供給を重複計上しない。
+   - 日中は登録した `Business` オブジェクトの寿命とアドレスを維持する。日末に売り手別登録表を破棄する。
+   - 匿名の `buy()` は売り手別の在庫・入金先を特定しないため、`transact()` に割当てた同じ商品をこの経路で買うと売り手在庫との所有者対応が失われる。所有者付きの売買には `transact()` を使用する。
    - フェーズ1の価格感応度は市場の設定値を使用し、取引回数では変化させない。
    - 更新価格は四捨五入して整数化し、1〜`int`最大値に制限する。供給・需要がともに0なら維持する。
    - 日末には需要を0に戻し、残在庫を次の日の供給として引き継ぐ。

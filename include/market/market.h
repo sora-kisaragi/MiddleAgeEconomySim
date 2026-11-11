@@ -18,6 +18,8 @@ private:
     std::map<std::string, int64_t> daily_demand;
     std::map<std::string, int64_t> daily_supply;
     std::map<std::string, int> opening_price;
+    std::map<std::string, int> unassigned_stock;
+    std::map<const Business*, std::map<std::string, int>> seller_listings;
     float price_volatility;
     
     static constexpr float MAX_VOLATILITY = 2.0f;    // Cap volatility to prevent instability
@@ -74,8 +76,15 @@ public:
 
         // Include the seller's offered stock even when this request cannot be filled.
         auto& market_stock = stock[product];
-        if (market_stock < seller->stock) {
-            addStock(product, seller->stock - market_stock);
+        auto& listed = seller_listings[seller][product];
+        if (seller->stock > listed) {
+            const int additional = seller->stock - listed;
+            const int assigned = std::min(additional, unassigned_stock[product]);
+            unassigned_stock[product] -= assigned;
+            const int newly_offered = additional - assigned;
+            market_stock += newly_offered;
+            daily_supply[product] += newly_offered;
+            listed += additional;
         }
         if (seller->stock < quantity) {
             addDemand(product, quantity);
@@ -83,6 +92,7 @@ public:
         }
 
         if (market_stock < quantity) {
+            addDemand(product, quantity);
             return false;
         }
 
@@ -90,6 +100,7 @@ public:
         buyer->addMoney(-total_cost);
         seller->addMoney(total_cost);
         seller->stock -= quantity;
+        listed -= quantity;
         market_stock -= quantity;
 
         // 取引履歴の更新
@@ -124,6 +135,7 @@ public:
         }
         int total_cost = price_it->second * quantity;
         stock[product] -= quantity;
+        unassigned_stock[product] -= std::min(quantity, unassigned_stock[product]);
         return total_cost;
     }
 
@@ -135,7 +147,9 @@ public:
             opening_price[product] = price[product];
             daily_demand[product] = 0;
             daily_supply[product] = stock[product];
+            unassigned_stock[product] = stock[product];
         }
+        seller_listings.clear();
     }
 
 private:
@@ -145,10 +159,12 @@ private:
         stock[product] = 0;
         daily_demand[product] = 0;
         daily_supply[product] = 0;
+        unassigned_stock[product] = 0;
     }
 
     void addStock(const std::string& product, int quantity) {
         stock[product] += quantity;
+        unassigned_stock[product] += quantity;
         daily_supply[product] += quantity;
     }
 
