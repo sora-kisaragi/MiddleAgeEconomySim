@@ -1,0 +1,11 @@
+execute_process(COMMAND "${PROGRAM}" --scenario balanced --days 3
+  RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error)
+if(NOT result STREQUAL "1")
+  message(FATAL_ERROR "Expected exit 1 after failed day: ${result}")
+endif()
+if(NOT error MATCHES "Day 1")
+  message(FATAL_ERROR "Failure did not identify the interrupted day: ${error}")
+endif()
+if(output MATCHES "物価指数" OR output MATCHES "シミュレーション結果" OR output MATCHES "終了時の総資金")
+  message(FATAL_ERROR "Interrupted simulation emitted a completed-day observation or final result")
+endif()

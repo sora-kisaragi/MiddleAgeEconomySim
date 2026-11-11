@@ -33,6 +33,10 @@ enable_testing()
 add_subdirectory(tests)
 
 if(TARGET ${PROJECT_NAME})
+  add_executable(simulation_failure_cli tests/cli_failure_stub.cpp src/main.cpp src/agent.cpp src/simulation_options.cpp)
+  add_test(NAME CliScenario.FailedDay
+    COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:simulation_failure_cli>"
+      -P "${CMAKE_SOURCE_DIR}/tests/cli_failure.cmake")
   foreach(scenario balanced shortage oversupply)
     add_test(NAME CliScenario.${scenario}
       COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:${PROJECT_NAME}>"

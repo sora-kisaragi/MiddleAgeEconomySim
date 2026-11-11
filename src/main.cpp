@@ -87,7 +87,10 @@ int main(int argc, char* argv[]) {
     // シミュレーション実行
     for (int day = 1; day <= options.days; ++day) {
         std::cout << "\n=== Day " << day << " ===\n";
-        simulateDay(people, businesses, market, government, loan_provider, trade_routes);
+        if (!simulateDay(people, businesses, market, government, loan_provider, trade_routes)) {
+            std::cerr << "Day " << day << " の処理が完了しなかったため終了します。\n";
+            return 1;
+        }
         const auto observation = price_index.observe(market);
         std::cout << "物価指数（基準日=100）: " << observation.value
                   << " | 前日比: " << observation.change_percent << "%\n";

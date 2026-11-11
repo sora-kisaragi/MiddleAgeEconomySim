@@ -3,24 +3,36 @@
 #include <set>
 #include <limits>
 
-void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses, Market& market, 
+bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses, Market& market,
                 Government& government, LoanProvider& loan_provider, std::vector<TradeRoute>& trade_routes) {
     std::cout << "=== 1日の経済活動をシミュレート ===\n";
     
     // 安全性チェック
     if (people.empty() || businesses.empty()) {
         std::cerr << "エラー: エージェントまたは企業が設定されていません。\n";
-        return;
+        return false;
     }
     
     try {
+        // Validate every business and aggregate listing before changing any state.
+        std::map<std::string, int> offered_stock;
+        for (const auto& business : businesses) {
+            if (business.product.empty() || business.price <= 0 ||
+                business.price > std::numeric_limits<int>::max() ||
+                business.daily_production < 0 || business.stock < 0 ||
+                business.stock > std::numeric_limits<int>::max() - business.daily_production) {
+                throw std::invalid_argument("Invalid business product, price, stock or production");
+            }
+            const int quantity = business.stock + business.daily_production;
+            auto& total = offered_stock[business.product];
+            if (total > std::numeric_limits<int>::max() - quantity) {
+                throw std::overflow_error("Combined product inventory exceeds market range");
+            }
+            total += quantity;
+        }
+
         // 生産活動
         for (auto& business : businesses) {
-            if (business.daily_production < 0 || business.stock < 0 ||
-                business.stock > std::numeric_limits<int>::max() - business.daily_production) {
-                std::cerr << "警告: " << business.product << "の在庫・日次生産量が不正、または在庫上限を超えます。\n";
-                continue;
-            }
             int production = business.daily_production;
             business.stock += production;
             std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
@@ -44,9 +56,6 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     // Rebuild each product's listings from the businesses' authoritative inventory.
     std::set<std::string> initialized_products;
     for (auto& business : businesses) {
-        if (business.price <= 0 || business.price > std::numeric_limits<int>::max()) {
-            throw std::invalid_argument("Business price is outside market range");
-        }
         if (initialized_products.insert(business.product).second) {
             const int quoted_price = market.getPrice(business.product);
             market.registerProduct(business.product, quoted_price > 0 ? quoted_price : static_cast<int>(business.price));
@@ -162,11 +171,14 @@ void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     std::cout << "政府の支持率: " << government.approval_rating << "%\n";
     
     
+    return true;
     } catch (const std::exception& e) {
         std::cerr << "シミュレーション中に重大なエラーが発生しました: " << e.what() << "\n";
-        std::cerr << "シミュレーションを安全に停止します。\n";
+        std::cerr << "シミュレーションを停止します。\n";
+        return false;
     } catch (...) {
         std::cerr << "予期しないエラーが発生しました。シミュレーションを停止します。\n";
+        return false;
     }
 }
 
