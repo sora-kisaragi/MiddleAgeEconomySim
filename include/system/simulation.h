@@ -7,5 +7,6 @@
 #include "market/market.h"
 #include "system/trade_route.h"
 
-void simulateDay(std::vector<Person>& people, std::vector<Business>& businesses, Market& market,
+// Returns false on rejected settings or an interrupted day; callers must stop.
+bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses, Market& market,
                  Government& government, LoanProvider& loan_provider, std::vector<TradeRoute>& trade_routes);
