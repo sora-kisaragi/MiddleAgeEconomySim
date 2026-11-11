@@ -120,10 +120,15 @@ public:
             throw std::runtime_error("Not enough stock to sell");
         }
         
-        // 売上金額の計算（オーバーフローチェック）
-        int64_t revenue = static_cast<int64_t>(quantity) * price;
-        if (revenue < 0) {  // オーバーフローチェック
+        if (price < 0) {
+            throw std::invalid_argument("Price cannot be negative");
+        }
+        if (price > std::numeric_limits<int64_t>::max() / quantity) {
             throw std::overflow_error("Sale would cause revenue overflow");
+        }
+        const int64_t revenue = static_cast<int64_t>(quantity) * price;
+        if (money > std::numeric_limits<int64_t>::max() - revenue) {
+            throw std::overflow_error("Sale would cause money overflow");
         }
         
         stock -= quantity;
@@ -134,6 +139,9 @@ public:
     void payWorkers(int64_t per_worker_salary) {
         if (per_worker_salary <= 0) {
             throw std::invalid_argument("Salary must be positive");
+        }
+        if (workers <= 0) {
+            throw std::runtime_error("Cannot pay workers without workers");
         }
         
         // 総給与の計算（オーバーフローチェック）
