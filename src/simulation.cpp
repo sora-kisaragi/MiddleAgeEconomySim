@@ -14,6 +14,11 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     }
     
     try {
+        for (const auto& person : people) {
+            if (person.satisfaction < 0 || person.satisfaction > 100) {
+                throw std::invalid_argument("NPC satisfaction must be between 0 and 100");
+            }
+        }
         // Validate every business and aggregate listing before changing any state.
         std::map<std::string, int> offered_stock;
         for (const auto& business : businesses) {
