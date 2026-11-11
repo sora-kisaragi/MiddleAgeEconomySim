@@ -2,12 +2,15 @@ name: Sync Main Changes to Wiki
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - "wiki/**"  # wikiフォルダ内の変更のみを対象
+      - "wiki/**"
+      - ".github/workflows/sync-main-to-wiki.yml"
   workflow_dispatch:
-    # 手動実行用
+
+concurrency:
+  group: sync-main-to-wiki
+  cancel-in-progress: false
 
 jobs:
   sync-main-to-wiki:
@@ -18,33 +21,46 @@ jobs:
       - name: Checkout Main Repository
         uses: actions/checkout@v4
         with:
+          ref: main
           path: main-repo
-          
-      - name: Checkout Wiki Repository
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}.wiki
-          path: wiki-repo
-          token: ${{ secrets.WIKI_ACCESS_TOKEN }}  # Wikiへの書き込み権限が必要
-          
-      - name: Setup Git
+          persist-credentials: false
+
+      - name: Sync and verify GitHub Wiki
+        shell: bash
+        env:
+          WIKI_TOKEN: ${{ github.token }}
         run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-          
-      - name: Sync Main to Wiki
-        run: |
-          # メインリポジトリのwikiフォルダからWikiリポジトリへコピー
-          cp -r main-repo/wiki/*.md wiki-repo/ || true
-          
-          cd wiki-repo
-          git add .
-          
-          # 変更があるか確認
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
+          export GIT_TERMINAL_PROMPT=0
+          wiki_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.wiki.git"
+          auth_header=$(printf 'x-access-token:%s' "$WIKI_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth_header"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.$wiki_url.extraheader"
+          export GIT_CONFIG_VALUE_0="Authorization: Basic $auth_header"
+          unset WIKI_TOKEN auth_header
+
+          git clone --no-checkout "$wiki_url" wiki-repo
+          wiki_ref=$(git -C wiki-repo symbolic-ref HEAD)
+          wiki_head=$(git -C wiki-repo rev-parse --verify HEAD)
+          git -C wiki-repo fetch --no-tags ../main-repo HEAD
+          source_commit=$(git -C wiki-repo rev-parse --verify FETCH_HEAD)
+          source_tree=$(git -C wiki-repo rev-parse --verify "$source_commit:wiki")
+          test "$(git -C wiki-repo cat-file -t "$source_tree")" = tree
+
+          if [ "$(git -C wiki-repo rev-parse "$wiki_head^{tree}")" != "$source_tree" ]; then
+            wiki_commit=$(git -C wiki-repo \
+              -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit-tree "$source_tree" -p "$wiki_head" -m "Sync Wiki from main $source_commit")
+            git -C wiki-repo push origin "$wiki_commit:$wiki_ref"
           fi
-          
-          git commit -m "Auto-sync Main repo changes to Wiki [skip ci]"
-          git push
+
+          git -C wiki-repo fetch --no-tags origin "$wiki_ref"
+          remote_commit=$(git -C wiki-repo rev-parse --verify FETCH_HEAD)
+          remote_tree=$(git -C wiki-repo rev-parse --verify "$remote_commit^{tree}")
+          if [ "$source_tree" != "$remote_tree" ]; then
+            echo "::error::Wiki tree differs from main wiki/ after synchronization."
+            exit 1
+          fi
+          printf 'Verified main %s wiki/ and remote Wiki %s (%s) share tree %s\n' \
+            "$source_commit" "$remote_commit" "$wiki_ref" "$source_tree"
