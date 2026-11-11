@@ -1,5 +1,6 @@
 #include <iostream>
 #include "system/simulation.h"
+#include "market/price_index.h"
 
 int main() {
     try {
@@ -58,6 +59,10 @@ int main() {
     std::cout << "=== 中世経済シミュレーション開始 ===\n";
     std::cout << "統合システム: 市場・政府・融資・貿易ルート\n\n";
     
+    market.registerProduct("小麦", static_cast<int>(farm.price));
+    market.registerProduct("パン", static_cast<int>(bakery.price));
+    PriceIndex price_index(market, {{"小麦", 1}, {"パン", 1}});
+
     auto total_money = [&]() {
         int64_t total = government.money + loan_provider.money;
         for (const auto& person : people) total += person.money;
@@ -70,6 +75,9 @@ int main() {
     for (int day = 1; day <= 5; ++day) {
         std::cout << "\n=== Day " << day << " ===\n";
         simulateDay(people, businesses, market, government, loan_provider, trade_routes);
+        const auto observation = price_index.observe(market);
+        std::cout << "物価指数（基準日=100）: " << observation.value
+                  << " | 前日比: " << observation.change_percent << "%\n";
     }
     
     // エージェント間の直接取引の実例
