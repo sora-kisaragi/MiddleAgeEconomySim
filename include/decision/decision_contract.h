@@ -98,8 +98,8 @@ public:
                 has_pass = true;
             } else {
                 const auto& order = std::get<PlaceOrderAction>(candidate.action);
-                if (order.quantity.value() == 0 || order.max_amount.value() == 0) {
-                    throw std::invalid_argument("order candidate must have positive quantity and budget");
+                if (order.quantity.value() == 0) {
+                    throw std::invalid_argument("order candidate must have positive quantity");
                 }
             }
         }
