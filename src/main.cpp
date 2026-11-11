@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <memory>
+#include "system/daily_csv_writer.h"
 #include "system/simulation.h"
 #include "market/price_index.h"
 #include "system/simulation_options.h"
@@ -9,8 +12,15 @@ int main(int argc, char* argv[]) {
         for (int index = 1; index < argc; ++index) arguments.emplace_back(argv[index]);
         const auto options = parseSimulationOptions(arguments);
         if (options.help) {
-            std::cout << "Usage: MiddleAgeEconomySim [--scenario demo|balanced|shortage|oversupply] [--days 1..10000]\n";
+            std::cout << "Usage: MiddleAgeEconomySim [--scenario demo|balanced|shortage|oversupply] [--days 1..10000] [--csv PATH]\n";
             return 0;
+        }
+        std::ofstream csv_file;
+        std::unique_ptr<DailyCsvWriter> csv_writer;
+        if (!options.csv_path.empty()) {
+            csv_file.open(options.csv_path);
+            if (!csv_file) throw std::runtime_error("Cannot open daily observation CSV: " + options.csv_path);
+            csv_writer = std::make_unique<DailyCsvWriter>(csv_file);
         }
         // 初期化
         Market market;
@@ -92,6 +102,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         const auto observation = price_index.observe(market);
+        if (csv_writer) csv_writer->writeDay(day, observation, total_money());
         std::cout << "物価指数（基準日=100）: " << observation.value
                   << " | 前日比: " << observation.change_percent << "%\n";
     }
