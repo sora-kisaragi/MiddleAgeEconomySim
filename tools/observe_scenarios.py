@@ -13,7 +13,8 @@ import subprocess
 
 def observe(program, output, days, source_commit):
     output.mkdir(parents=True, exist_ok=True)
-    (output / "observations.json").unlink(missing_ok=True)
+    for name in ("observations.json", "price-indices.svg", "price-indices.png"):
+        (output / name).unlink(missing_ok=True)
     result = {"source_commit": source_commit,
               "observed_at_jst": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).isoformat(),
               "binary_sha256": hashlib.sha256(program.read_bytes()).hexdigest(),
