@@ -117,13 +117,33 @@ TEST(PublicFinanceTest, Loan_InvalidRateOrSelf_IsRejected) {
 
 TEST(PublicFinanceTest, Loan_MaximumPrincipal_IsRecordedAndTransferred) {
     LoanProvider lender;
+    lender.id = economy::ActorId(1);
     lender.money = std::numeric_limits<int64_t>::max();
     Agent borrower;
+    borrower.id = economy::ActorId(2);
     EXPECT_TRUE(lender.provideLoan(&borrower, std::numeric_limits<int64_t>::max()));
     EXPECT_EQ(lender.money, 0);
     EXPECT_EQ(borrower.money, std::numeric_limits<int64_t>::max());
     ASSERT_EQ(lender.active_loans.size(), 1u);
     EXPECT_EQ(lender.active_loans[0].amount, std::numeric_limits<int64_t>::max());
+}
+
+TEST(PublicFinanceTest, Loan_MissingIdentity_PreservesBalancesAndLoanList) {
+    LoanProvider lender;
+    lender.money = 100;
+    Agent borrower;
+    borrower.money = 10;
+
+    EXPECT_FALSE(lender.provideLoan(&borrower, 50));
+    EXPECT_EQ(lender.money, 100);
+    EXPECT_EQ(borrower.money, 10);
+    EXPECT_TRUE(lender.active_loans.empty());
+
+    lender.id = economy::ActorId(1);
+    EXPECT_FALSE(lender.provideLoan(&borrower, 50));
+    EXPECT_EQ(lender.money, 100);
+    EXPECT_EQ(borrower.money, 10);
+    EXPECT_TRUE(lender.active_loans.empty());
 }
 
 TEST(PublicFinanceTest, Tax_RateEndpointsAndFractionalRounding) {

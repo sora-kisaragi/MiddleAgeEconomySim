@@ -77,8 +77,8 @@ int main(int argc, char* argv[]) {
     bakery.money = 1000;
     if (options.scenario == "demo") businesses.push_back(bakery);
 
-    // Resolve sample actors through the registry; the legacy Agent API still
-    // receives integer IDs until the settlement and history paths are migrated.
+    // Resolve sample actors through the registry so the runtime model keeps
+    // the same typed identity assigned by the deterministic registry.
     std::vector<economy::ActorSpec> actor_specs = {
         {"business:farm", "農場", economy::ActorKind::Business, "person:farmer"},
         {"institution:government", "政府", economy::ActorKind::Government},
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
     }
     const auto actor_registry = economy::ActorRegistry::fromSpecs(actor_specs);
     const auto actor_id = [&](const std::string& key) {
-        return static_cast<int64_t>(actor_registry.actorByKey(key).id.value());
+        return actor_registry.actorByKey(key).id;
     };
     government.id = actor_id("institution:government");
     loan_provider.id = actor_id("institution:lender");

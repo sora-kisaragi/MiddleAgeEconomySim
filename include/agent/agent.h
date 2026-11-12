@@ -2,17 +2,20 @@
 #define AGENT_H
 
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <cstdint>
 #include <vector>
 #include <string>
 
+#include "core/economy_types.h"
+
 class Agent {
 public:
-    int64_t id;
+    std::optional<economy::ActorId> id;
     int64_t money;
 
-    Agent() : id(0), money(0) {}
+    Agent() : id(std::nullopt), money(0) {}
     virtual ~Agent() = default; // Add virtual destructor for polymorphic classes
 
     void addMoney(int64_t amount) {

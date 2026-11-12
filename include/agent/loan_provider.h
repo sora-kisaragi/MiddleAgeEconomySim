@@ -15,15 +15,16 @@ public:
     LoanProvider() : base_interest_rate(0.05f) {}
 
     bool provideLoan(Agent* borrower, int64_t amount) {
-        if (!borrower || borrower == this || amount <= 0 ||
+        if (!borrower || borrower == this || !id.has_value() || !borrower->id.has_value() || amount <= 0 ||
             !std::isfinite(base_interest_rate) || base_interest_rate < 0) return false;
         if (money < amount || borrower->money > std::numeric_limits<int64_t>::max() - amount) {
             return false;
         }
 
         Loan loan;
-        loan.lender_id = id;
-        loan.borrower_id = borrower->id;
+        // Loan is still a legacy record; unwrap only after rejecting absent IDs.
+        loan.lender_id = static_cast<int64_t>(id->value());
+        loan.borrower_id = static_cast<int64_t>(borrower->id->value());
         loan.amount = amount;
         loan.interest_rate = base_interest_rate;
         loan.days_remaining = 30;  // 30日の融資期間

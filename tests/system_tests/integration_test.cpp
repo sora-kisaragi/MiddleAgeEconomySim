@@ -17,15 +17,18 @@ protected:
         
         // Initialize government
         government = new Government();
+        government->id = economy::ActorId(1);
         government->money = 1000;
         government->approval_rating = 75.0f;
         
         // Initialize loan provider
         loan_provider = new LoanProvider();
+        loan_provider->id = economy::ActorId(2);
         loan_provider->money = 5000;
         
         // Create people
         Person farmer;
+        farmer.id = economy::ActorId(3);
         farmer.name = "農夫";
         farmer.job = "農業";
         farmer.setDailyIncome(50);
@@ -34,6 +37,7 @@ protected:
         people.push_back(farmer);
         
         Person merchant;
+        merchant.id = economy::ActorId(4);
         merchant.name = "商人";
         merchant.job = "商売";
         merchant.setDailyIncome(80);
@@ -43,6 +47,7 @@ protected:
         
         // Create businesses
         Business farm;
+        farm.id = economy::ActorId(5);
         farm.product = "小麦";
         farm.daily_production = 10;
         farm.price = 5;
@@ -51,6 +56,7 @@ protected:
         businesses.push_back(farm);
         
         Business bakery;
+        bakery.id = economy::ActorId(6);
         bakery.product = "パン";
         bakery.daily_production = 5;
         bakery.price = 10;
