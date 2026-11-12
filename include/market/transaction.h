@@ -1,103 +1,50 @@
 #pragma once
-#include <string>
-#include <ctime>
-#include <stdexcept>
-#include <cstdint>
 
-struct Transaction {
-    int32_t transaction_id;
-    int32_t seller_id;
-    int32_t buyer_id;
-    std::string item;
-    int32_t quantity;
-    int64_t price;  // 大きな取引に対応するため64ビットに
-    time_t timestamp;
-    
-    // デフォルトコンストラクタ
-    Transaction() : 
-        transaction_id(0), 
-        seller_id(0), 
-        buyer_id(0), 
-        item(""), 
-        quantity(0), 
-        price(0), 
-        timestamp(std::time(nullptr))  // 現在時刻をデフォルトに
-    {}
-    
-    // 完全コンストラクタ
-    Transaction(int32_t t_id, int32_t s_id, int32_t b_id, 
-               const std::string& t_item, int32_t qty, int64_t prc) 
-        : transaction_id(t_id)
-        , seller_id(s_id)
-        , buyer_id(b_id)
-        , item(t_item)
-        , quantity(qty)
-        , price(prc)
-        , timestamp(std::time(nullptr)) 
-    {
-        validate();
-    }
-    
-    // バリデーション
-    void validate() const {
-        if (transaction_id < 0) {
-            throw std::invalid_argument("Transaction ID cannot be negative");
+#include "core/economy_types.h"
+
+namespace economy {
+
+// A committed trade record uses run-scoped identifiers and simulation time.
+// Wall-clock time is deliberately excluded so equal runs produce equal records.
+class Transaction {
+public:
+    Transaction(EventId event_id, ActorId seller_id, ActorId buyer_id,
+                ProductId product_id, Quantity quantity, Money unit_price,
+                GameTime committed_at)
+        : event_id_(event_id), seller_id_(seller_id), buyer_id_(buyer_id),
+          product_id_(product_id), quantity_(quantity), unit_price_(unit_price),
+          committed_day_(committed_at.day), committed_phase_(committed_at.phase),
+          committed_sequence_in_day_(committed_at.sequence_in_day) {
+        if (seller_id_ == buyer_id_) {
+            throw std::invalid_argument("seller and buyer must differ");
         }
-        if (seller_id < 0) {
-            throw std::invalid_argument("Seller ID cannot be negative");
-        }
-        if (buyer_id < 0) {
-            throw std::invalid_argument("Buyer ID cannot be negative");
-        }
-        if (item.empty()) {
-            throw std::invalid_argument("Item cannot be empty");
-        }
-        if (quantity <= 0) {
-            throw std::invalid_argument("Quantity must be positive");
-        }
-        if (price < 0) {
-            throw std::invalid_argument("Price cannot be negative");
+        if (quantity_.value() == 0) {
+            throw std::invalid_argument("transaction quantity must be positive");
         }
     }
-    
-    // 総取引額の計算
-    int64_t getTotalValue() const {
-        // オーバーフロー検出
-        if (price > 0 && quantity > std::numeric_limits<int64_t>::max() / price) {
-            throw std::overflow_error("Total value would overflow");
-        }
-        return price * quantity;
+
+    EventId eventId() const noexcept { return event_id_; }
+    ActorId sellerId() const noexcept { return seller_id_; }
+    ActorId buyerId() const noexcept { return buyer_id_; }
+    ProductId productId() const noexcept { return product_id_; }
+    Quantity quantity() const noexcept { return quantity_; }
+    Money unitPrice() const noexcept { return unit_price_; }
+    GameTime committedAt() const noexcept {
+        return GameTime(committed_day_, committed_phase_, committed_sequence_in_day_);
     }
-    
-    // トランザクションの経過時間（秒）を取得
-    time_t getElapsedTime() const {
-        return std::time(nullptr) - timestamp;
-    }
-    
-    // トランザクションが指定時間（秒）以上経過しているかチェック
-    bool isOlderThan(time_t seconds) const {
-        return getElapsedTime() >= seconds;
-    }
-    
-    // セッターメソッド（バリデーション付き）
-    void setQuantity(int32_t qty) {
-        if (qty <= 0) {
-            throw std::invalid_argument("Quantity must be positive");
-        }
-        quantity = qty;
-    }
-    
-    void setPrice(int64_t prc) {
-        if (prc < 0) {
-            throw std::invalid_argument("Price cannot be negative");
-        }
-        price = prc;
-    }
-    
-    void setItem(const std::string& new_item) {
-        if (new_item.empty()) {
-            throw std::invalid_argument("Item cannot be empty");
-        }
-        item = new_item;
-    }
+
+    Money totalValue() const { return unit_price_.multiply(quantity_.value()); }
+
+private:
+    EventId event_id_;
+    ActorId seller_id_;
+    ActorId buyer_id_;
+    ProductId product_id_;
+    Quantity quantity_;
+    Money unit_price_;
+    std::uint64_t committed_day_;
+    std::uint8_t committed_phase_;
+    std::uint64_t committed_sequence_in_day_;
 };
+
+} // namespace economy
