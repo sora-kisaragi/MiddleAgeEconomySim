@@ -6,7 +6,7 @@ TEST(PersonTest, Creation) {
     Person person;
     
     // Agent部分の初期化を確認
-    EXPECT_EQ(person.id, 0);
+    EXPECT_FALSE(person.id.has_value());
     EXPECT_EQ(person.money, 0);
     
     // Person固有のフィールドが正しく初期化されているか確認
@@ -26,12 +26,12 @@ TEST(PersonTest, SetPersonInfo) {
     Person person;
     
     // 個人情報を設定
-    person.id = 101;
+    person.id = economy::ActorId(101);
     person.name = "John Doe";
     person.job = "Farmer";
     person.money = 500;
     
-    EXPECT_EQ(person.id, 101);
+    EXPECT_EQ(person.id, economy::ActorId(101));
     EXPECT_EQ(person.name, "John Doe");
     EXPECT_EQ(person.job, "Farmer");
     EXPECT_EQ(person.money, 500);
@@ -114,10 +114,10 @@ TEST(PersonTest, InheritanceCheck) {
     Person person;
     Agent* agent = &person;  // 基底クラスのポインタに代入可能であることを確認
     
-    agent->id = 202;
+    agent->id = economy::ActorId(202);
     agent->money = 1000;
     
-    EXPECT_EQ(person.id, 202);
+    EXPECT_EQ(person.id, economy::ActorId(202));
     EXPECT_EQ(person.money, 1000);
 }
 

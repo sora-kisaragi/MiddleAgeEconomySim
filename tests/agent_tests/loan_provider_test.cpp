@@ -9,11 +9,11 @@ protected:
         borrower = new Person();
         
         // 基本設定
-        lender->id = 1;
+        lender->id = economy::ActorId(1);
         lender->money = 1000;
         lender->base_interest_rate = 0.05f;
         
-        borrower->id = 2;
+        borrower->id = economy::ActorId(2);
         borrower->money = 100;
     }
 
@@ -28,7 +28,7 @@ protected:
 
 TEST_F(LoanProviderTest, Creation) {
     LoanProvider provider;
-    EXPECT_EQ(provider.id, 0);
+    EXPECT_FALSE(provider.id.has_value());
     EXPECT_EQ(provider.money, 0);
     EXPECT_TRUE(provider.active_loans.empty());
     EXPECT_FLOAT_EQ(provider.base_interest_rate, 0.05f);
@@ -44,8 +44,8 @@ TEST_F(LoanProviderTest, ProvideLoan_Success) {
     EXPECT_EQ(lender->active_loans.size(), 1);
     
     const Loan& loan = lender->active_loans[0];
-    EXPECT_EQ(loan.lender_id, lender->id);
-    EXPECT_EQ(loan.borrower_id, borrower->id);
+    EXPECT_EQ(loan.lender_id, static_cast<int64_t>(lender->id->value()));
+    EXPECT_EQ(loan.borrower_id, static_cast<int64_t>(borrower->id->value()));
     EXPECT_EQ(loan.amount, loan_amount);
     EXPECT_FLOAT_EQ(loan.interest_rate, lender->base_interest_rate);
     EXPECT_FALSE(loan.defaulted);

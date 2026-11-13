@@ -4,8 +4,17 @@
 // Agent構造体の基本テスト
 TEST(AgentTest, Creation) {
     Agent agent;
-    EXPECT_EQ(agent.id, 0);
+    EXPECT_FALSE(agent.id.has_value());
     EXPECT_EQ(agent.money, 0);
+}
+
+TEST(AgentTest, UsesTypedOptionalIdentity) {
+    Agent agent;
+    agent.id = economy::ActorId(17);
+
+    ASSERT_TRUE(agent.id.has_value());
+    EXPECT_EQ(agent.id.value(), economy::ActorId(17));
+    EXPECT_THROW((economy::ActorId(0)), std::invalid_argument);
 }
 
 // お金の操作テスト
