@@ -52,3 +52,38 @@ TEST(EconomyTypesTest, GameTimeUsesOnlySimulatedDaysAndPhases) {
     EXPECT_THROW(GameTime(1, 13, 0), std::invalid_argument);
     EXPECT_THROW(GameTime(1, 256, 0), std::invalid_argument);
 }
+
+TEST(EconomyTypesTest, GameTimeSequencerIsDeterministicAcrossPhasesAndDays) {
+    const auto run = [] {
+        GameTimeSequencer sequencer;
+        return std::vector<GameTime>{sequencer.next(1, 1), sequencer.next(1, 1),
+                                     sequencer.next(1, 8), sequencer.next(2, 1)};
+    };
+    const auto first = run();
+    const auto second = run();
+    ASSERT_EQ(first.size(), second.size());
+    for (std::size_t i = 0; i < first.size(); ++i) EXPECT_EQ(first[i], second[i]);
+    EXPECT_EQ(first[0], GameTime(1, 1, 1));
+    EXPECT_EQ(first[1], GameTime(1, 1, 2));
+    EXPECT_EQ(first[2], GameTime(1, 8, 3));
+    EXPECT_EQ(first[3], GameTime(2, 1, 1));
+}
+
+TEST(EconomyTypesTest, GameTimeSequencerRejectsInvalidOrderWithoutAdvancing) {
+    GameTimeSequencer sequencer(GameTime(3, 4, 7));
+    EXPECT_THROW(sequencer.next(3, 3), std::invalid_argument);
+    EXPECT_THROW(sequencer.next(2, 12), std::invalid_argument);
+    EXPECT_THROW(sequencer.next(3, 13), std::invalid_argument);
+    ASSERT_TRUE(sequencer.last().has_value());
+    EXPECT_EQ(*sequencer.last(), GameTime(3, 4, 7));
+    EXPECT_EQ(sequencer.next(3, 4), GameTime(3, 4, 8));
+}
+
+TEST(EconomyTypesTest, GameTimeSequencerRejectsSequenceOverflowWithoutAdvancing) {
+    constexpr auto max = std::numeric_limits<std::int64_t>::max();
+    GameTimeSequencer sequencer(GameTime(1, 12, static_cast<std::uint64_t>(max)));
+    EXPECT_THROW(sequencer.next(1, 12), std::invalid_argument);
+    ASSERT_TRUE(sequencer.last().has_value());
+    EXPECT_EQ(*sequencer.last(), GameTime(1, 12, static_cast<std::uint64_t>(max)));
+    EXPECT_EQ(sequencer.next(2, 1), GameTime(2, 1, 1));
+}

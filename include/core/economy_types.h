@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -163,6 +164,35 @@ struct GameTime {
         if (lhs.phase != rhs.phase) return lhs.phase < rhs.phase;
         return lhs.sequence_in_day < rhs.sequence_in_day;
     }
+};
+
+// Called in the simulation's fixed processing order. Sequence numbers are
+// unique within a day, including across phase boundaries; a new day resets
+// the counter. A checkpoint can restore the last committed time.
+class GameTimeSequencer {
+public:
+    GameTimeSequencer() = default;
+    explicit GameTimeSequencer(GameTime last_committed) : last_(last_committed) {}
+
+    GameTime next(std::uint64_t day, unsigned int phase) {
+        // Validate the requested time before advancing the stored position.
+        GameTime(day, phase, 0);
+        if (last_ && (day < last_->day ||
+                      (day == last_->day && phase < last_->phase))) {
+            throw std::invalid_argument("game time cannot move backwards");
+        }
+        if (day == 0) throw std::invalid_argument("day zero is initialization only");
+        const std::uint64_t sequence = last_ && day == last_->day
+            ? last_->sequence_in_day + 1 : 1;
+        const GameTime candidate(day, phase, sequence);
+        last_.emplace(candidate);
+        return candidate;
+    }
+
+    const std::optional<GameTime>& last() const noexcept { return last_; }
+
+private:
+    std::optional<GameTime> last_;
 };
 
 } // namespace economy
