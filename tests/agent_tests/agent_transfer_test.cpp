@@ -2,6 +2,28 @@
 #include <limits>
 #include "agent/agent.h"
 
+TEST(AgentTransferTest, InvalidTransferLeavesBalancesUnchangedBeforeExactBalancePayment) {
+    Agent payer;
+    Agent recipient;
+    payer.money = 10;
+    recipient.money = 7;
+
+    EXPECT_FALSE(payer.transferMoneyTo(nullptr, 1));
+    EXPECT_EQ(payer.money, 10);
+    EXPECT_FALSE(payer.transferMoneyTo(&payer, 1));
+    EXPECT_EQ(payer.money, 10);
+    EXPECT_FALSE(payer.transferMoneyTo(&recipient, -1));
+    EXPECT_EQ(payer.money, 10);
+    EXPECT_EQ(recipient.money, 7);
+    EXPECT_FALSE(payer.transferMoneyTo(&recipient, 11));
+    EXPECT_EQ(payer.money, 10);
+    EXPECT_EQ(recipient.money, 7);
+
+    ASSERT_TRUE(payer.transferMoneyTo(&recipient, 10));
+    EXPECT_EQ(payer.money, 0);
+    EXPECT_EQ(recipient.money, 17);
+}
+
 TEST(AgentTransferTest, DirectTrade_RecipientOverflow_LeavesBothBalancesUnchanged) {
     Agent buyer;
     Agent seller;
