@@ -87,3 +87,36 @@ TEST(ActorRegistryTest, OneHundredPeopleRemainOneHundredWithBusinessesAndStores)
     EXPECT_EQ(registry.store(registry.storeFor(registry.actorByKey("business:2").id)).operator_business_id,
               registry.actorByKey("business:2").id);
 }
+
+TEST(ActorRegistryTest, ClosedBusinessKeyCannotBeReusedAndReferencesSurviveNewRegistration) {
+    auto registry = ActorRegistry::fromSpecs(villageSpecs());
+    const ActorId owner = registry.actorByKey("person:p17").id;
+    const ActorId closed = registry.actorByKey("business:b4").id;
+    const AccountId closed_account = registry.accountFor(closed).id;
+    const StoreId closed_store = registry.storeFor(closed);
+    registry.closeBusiness(closed);
+
+    auto without_rejected_registration = registry;
+    EXPECT_THROW(registry.addBusiness("business:b4", "再登録", owner, true),
+                 std::invalid_argument);
+    const ActorId added = registry.addBusiness("business:b5", "新店舗", owner, true);
+    const ActorId expected = without_rejected_registration.addBusiness(
+        "business:b5", "新店舗", owner, true);
+
+    EXPECT_EQ(added, expected);
+    EXPECT_EQ(registry.accountFor(added).id,
+              without_rejected_registration.accountFor(expected).id);
+    EXPECT_EQ(registry.storeFor(added), without_rejected_registration.storeFor(expected));
+    EXPECT_NE(added, closed);
+    EXPECT_NE(registry.accountFor(added).id, closed_account);
+    EXPECT_NE(registry.storeFor(added), closed_store);
+    EXPECT_EQ(registry.actorByKey("business:b4").id, closed);
+    EXPECT_FALSE(registry.actor(closed).active);
+    EXPECT_EQ(registry.account(closed_account).owner_actor_id, closed);
+    EXPECT_EQ(registry.store(closed_store).operator_business_id, closed);
+    EXPECT_FALSE(registry.store(closed_store).active);
+    EXPECT_TRUE(registry.actor(added).active);
+    EXPECT_TRUE(registry.store(registry.storeFor(added)).active);
+    EXPECT_EQ(registry.population(), 1U);
+    EXPECT_EQ(registry.actorCount(), 5U);
+}
