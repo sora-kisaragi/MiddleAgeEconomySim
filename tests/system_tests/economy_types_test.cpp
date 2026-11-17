@@ -87,3 +87,20 @@ TEST(EconomyTypesTest, GameTimeSequencerRejectsSequenceOverflowWithoutAdvancing)
     EXPECT_EQ(*sequencer.last(), GameTime(1, 12, static_cast<std::uint64_t>(max)));
     EXPECT_EQ(sequencer.next(2, 1), GameTime(2, 1, 1));
 }
+
+TEST(EconomyTypesTest, InvalidFirstTimeDoesNotCreateCheckpoint) {
+    const auto max_day = static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max());
+    const std::vector<std::pair<std::uint64_t, unsigned int>> invalid_times = {
+        {0, 0}, {0, 1}, {1, 0}, {1, 13}, {1, 256}, {max_day + 1, 1}
+    };
+    for (const auto& invalid : invalid_times) {
+        SCOPED_TRACE(::testing::Message() << "day=" << invalid.first << " phase=" << invalid.second);
+        GameTimeSequencer sequencer;
+        EXPECT_FALSE(sequencer.last().has_value());
+        EXPECT_THROW(sequencer.next(invalid.first, invalid.second), std::invalid_argument);
+        EXPECT_FALSE(sequencer.last().has_value());
+        EXPECT_EQ(sequencer.next(max_day, 12), GameTime(max_day, 12, 1));
+        ASSERT_TRUE(sequencer.last().has_value());
+        EXPECT_EQ(*sequencer.last(), GameTime(max_day, 12, 1));
+    }
+}
