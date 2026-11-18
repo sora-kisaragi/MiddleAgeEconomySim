@@ -3,7 +3,7 @@
 #include <iostream>
 
 bool Agent::transferMoneyTo(Agent* recipient, int64_t amount) {
-    if (!recipient || recipient == this || amount < 0 || money < amount ||
+    if (!recipient || recipient == this || amount < 0 || money < amount || recipient->money < 0 ||
         recipient->money > std::numeric_limits<int64_t>::max() - amount) {
         return false;
     }
