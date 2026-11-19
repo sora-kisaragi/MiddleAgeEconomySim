@@ -44,8 +44,8 @@ TEST_F(LoanProviderTest, ProvideLoan_Success) {
     EXPECT_EQ(lender->active_loans.size(), 1);
     
     const Loan& loan = lender->active_loans[0];
-    EXPECT_EQ(loan.lender_id, static_cast<int64_t>(lender->id->value()));
-    EXPECT_EQ(loan.borrower_id, static_cast<int64_t>(borrower->id->value()));
+    EXPECT_EQ(loan.lender_id, lender->id);
+    EXPECT_EQ(loan.borrower_id, borrower->id);
     EXPECT_EQ(loan.amount, loan_amount);
     EXPECT_FLOAT_EQ(loan.interest_rate, lender->base_interest_rate);
     EXPECT_FALSE(loan.defaulted);

@@ -1,13 +1,18 @@
 #include <gtest/gtest.h>
 #include "../../include/market/loan.h"
+#include <type_traits>
+
+static_assert(!std::is_assignable_v<decltype(Loan::lender_id)&, int64_t>);
+static_assert(!std::is_assignable_v<decltype(Loan::borrower_id)&, int64_t>);
+static_assert(!std::is_assignable_v<decltype(Loan::lender_id)&, economy::AccountId>);
 
 // Loan構造体の基本テスト
 TEST(LoanTest, Creation) {
     Loan loan;
     
     // デフォルト値の確認
-    EXPECT_EQ(loan.lender_id, 0);
-    EXPECT_EQ(loan.borrower_id, 0);
+    EXPECT_FALSE(loan.lender_id.has_value());
+    EXPECT_FALSE(loan.borrower_id.has_value());
     EXPECT_EQ(loan.amount, 0);
     EXPECT_FLOAT_EQ(loan.interest_rate, 0.0f);
     EXPECT_EQ(loan.days_remaining, 0);
@@ -20,15 +25,15 @@ TEST(LoanTest, SetLoanInfo) {
     Loan loan;
     
     // ローン情報を設定
-    loan.lender_id = 1;
-    loan.borrower_id = 2;
+    loan.lender_id = economy::ActorId(1);
+    loan.borrower_id = economy::ActorId(2);
     loan.amount = 1000;
     loan.interest_rate = 0.05f;
     loan.days_remaining = 30;
     loan.payment_schedule = 10;
     
-    EXPECT_EQ(loan.lender_id, 1);
-    EXPECT_EQ(loan.borrower_id, 2);
+    EXPECT_EQ(loan.lender_id, economy::ActorId(1));
+    EXPECT_EQ(loan.borrower_id, economy::ActorId(2));
     EXPECT_EQ(loan.amount, 1000);
     EXPECT_FLOAT_EQ(loan.interest_rate, 0.05f);
     EXPECT_EQ(loan.days_remaining, 30);

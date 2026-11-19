@@ -22,9 +22,8 @@ public:
         }
 
         Loan loan;
-        // Loan is still a legacy record; unwrap only after rejecting absent IDs.
-        loan.lender_id = static_cast<int64_t>(id->value());
-        loan.borrower_id = static_cast<int64_t>(borrower->id->value());
+        loan.lender_id = id;
+        loan.borrower_id = borrower->id;
         loan.amount = amount;
         loan.interest_rate = base_interest_rate;
         loan.days_remaining = 30;  // 30日の融資期間
@@ -44,7 +43,7 @@ public:
         for (auto& loan : active_loans) {
             if (loan.defaulted) continue;
 
-            Agent* borrower = findBorrower(loan.borrower_id);
+            Agent* borrower = loan.borrower_id ? findBorrower(*loan.borrower_id) : nullptr;
             if (!borrower) {
                 loan.defaulted = true;
                 all_collected = false;
@@ -66,7 +65,7 @@ public:
     }
 
 private:
-    Agent* findBorrower(int64_t /*borrower_id*/) {
+    Agent* findBorrower(economy::ActorId /*borrower_id*/) {
         // この実装は後で適切なものに置き換える必要がある
         return nullptr;
     }
