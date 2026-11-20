@@ -1,6 +1,7 @@
 #pragma once
 
 #include "decision/decision_contract.h"
+#include "core/actor_registry.h"
 
 #include <functional>
 #include <optional>
@@ -30,9 +31,10 @@ public:
     // trusted driver/registry, never from the policy response. The allocator
     // runs only after a valid non-PASS candidate and phase are established.
     // The caller must bind response_run_id to the actual invocation; this
-    // function cannot authenticate a caller-supplied string. Registry authorization,
+    // function cannot authenticate a caller-supplied string. Command-specific authorization,
     // canonical request hashing and settlement validation remain mandatory.
     static std::optional<PreparedOrderCommand> prepareOrder(
+        const ActorRegistry& registry,
         const DecisionRequest& request, const DecisionResponse& response,
         const std::string& caller_run_id, const std::string& response_run_id,
         ActorId caller_actor_id, std::optional<ActorId> caller_controller_person_id,
@@ -41,6 +43,18 @@ public:
             caller_actor_id != request.actorId() ||
             caller_controller_person_id != request.controllerPersonId()) {
             throw std::invalid_argument("decision caller does not match request");
+        }
+        const auto& actor = registry.actor(caller_actor_id);
+        const auto controller = actor.kind == ActorKind::Person
+            ? std::optional<ActorId>(actor.id) : actor.owner_person_id;
+        if (!actor.active || caller_controller_person_id != controller) {
+            throw std::invalid_argument("decision controller is not authorized for actor");
+        }
+        if (controller) {
+            const auto& person = registry.actor(*controller);
+            if (!person.active || person.kind != ActorKind::Person) {
+                throw std::invalid_argument("decision controller must be an active person");
+            }
         }
         const auto selected = selectCandidate(request, response, current_state_version);
         if (std::holds_alternative<PassAction>(selected.action)) return std::nullopt;
