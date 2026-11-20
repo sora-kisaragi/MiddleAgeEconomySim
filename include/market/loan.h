@@ -2,10 +2,12 @@
 #define LOAN_H
 
 #include <cstdint>
+#include <optional>
+#include "core/economy_types.h"
 
 struct Loan {
-    int64_t lender_id;       // 貸し手のID
-    int64_t borrower_id;     // 借り手のID
+    std::optional<economy::ActorId> lender_id;   // 貸し手のID
+    std::optional<economy::ActorId> borrower_id; // 借り手のID
     int64_t amount;          // 融資額
     float interest_rate;     // 利子率
     int32_t days_remaining;  // 残り日数
@@ -13,8 +15,8 @@ struct Loan {
     bool defaulted;          // デフォルト状態
 
     Loan() :
-        lender_id(0),
-        borrower_id(0),
+        lender_id(std::nullopt),
+        borrower_id(std::nullopt),
         amount(0),
         interest_rate(0.0f),
         days_remaining(0),
