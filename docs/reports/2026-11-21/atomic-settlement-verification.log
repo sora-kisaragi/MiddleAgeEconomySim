@@ -1,0 +1,508 @@
+2026-11-21 JST 追加日次開発 / Issue #43 / PR #111
+Base: 07d35e668cd582eb883536bb3c542563abf2fef6
+Code local: 9e61c9caea2ff683315d726fe6f31737aefe4920
+Code public: abebdcc8e681a88d51ed450d9d402b139eb88a94
+Tree (both): bd15c0033dcb675c3cb487b978d3f88dd7da59b3
+Observed recording start: 2026-11-21 08:48:34 JST. Final elapsed time is recorded in PR body.
+Environment: GCC 14.2.0, C++17, CMake 3.31.6, GoogleTest 1.14.0
+Commands:
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=/workspace/scratch/43766858b273/googletest
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+All succeeded after using the cmake/data/bin/cmake binary instead of the broken Python wrapper.
+
+### Final CTest summary
+        Start 233: TradeRouteTest.MultipleGoods
+233/233 Test #233: TradeRouteTest.MultipleGoods ................................................................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 233
+
+Total Test time (real) =   1.55 sec
+
+### Independent final target tests (17/17, exit 0)
+Running main() from /workspace/scratch/43766858b273/googletest/googletest/src/gtest_main.cc
+[==========] Running 17 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 17 tests from SettlementServiceTest
+[ RUN      ] SettlementServiceTest.CommitsBatchAndKeepsHouseholdSeparateFromBusiness
+[       OK ] SettlementServiceTest.CommitsBatchAndKeepsHouseholdSeparateFromBusiness (0 ms)
+[ RUN      ] SettlementServiceTest.SuccessReplayReturnsOriginalResultAfterLaterCommand
+[       OK ] SettlementServiceTest.SuccessReplayReturnsOriginalResultAfterLaterCommand (0 ms)
+[ RUN      ] SettlementServiceTest.RejectionReplayDoesNotAddHistoryOrRetryChangedFunds
+[       OK ] SettlementServiceTest.RejectionReplayDoesNotAddHistoryOrRetryChangedFunds (0 ms)
+[ RUN      ] SettlementServiceTest.SameIdDifferentPayloadConflictsEvenWhenHashMatches
+[       OK ] SettlementServiceTest.SameIdDifferentPayloadConflictsEvenWhenHashMatches (0 ms)
+[ RUN      ] SettlementServiceTest.LateInvalidReferenceDiscardsDebitAndEarlierCredit
+[       OK ] SettlementServiceTest.LateInvalidReferenceDiscardsDebitAndEarlierCredit (0 ms)
+[ RUN      ] SettlementServiceTest.RejectsUnauthorizedSourceAndController
+[       OK ] SettlementServiceTest.RejectsUnauthorizedSourceAndController (0 ms)
+[ RUN      ] SettlementServiceTest.ReadsLiveRegistryAndRejectsClosedBusiness
+[       OK ] SettlementServiceTest.ReadsLiveRegistryAndRejectsClosedBusiness (0 ms)
+[ RUN      ] SettlementServiceTest.RejectsInvalidRequestAndStaleVersion
+[       OK ] SettlementServiceTest.RejectsInvalidRequestAndStaleVersion (0 ms)
+[ RUN      ] SettlementServiceTest.RejectsInvalidTimeAndBackwardTime
+[       OK ] SettlementServiceTest.RejectsInvalidTimeAndBackwardTime (0 ms)
+[ RUN      ] SettlementServiceTest.RejectsAggregateOverflowAndAllowsExactMaximum
+[       OK ] SettlementServiceTest.RejectsAggregateOverflowAndAllowsExactMaximum (0 ms)
+[ RUN      ] SettlementServiceTest.ConstructionRejectsUnknownAccountsAndOverflow
+[       OK ] SettlementServiceTest.ConstructionRejectsUnknownAccountsAndOverflow (0 ms)
+[ RUN      ] SettlementServiceTest.InjectedExceptionsNeverPublishCandidateOrResult
+[       OK ] SettlementServiceTest.InjectedExceptionsNeverPublishCandidateOrResult (0 ms)
+[ RUN      ] SettlementServiceTest.FailureKeepsPreviouslyCommittedTransferAndAllowsRetry
+[       OK ] SettlementServiceTest.FailureKeepsPreviouslyCommittedTransferAndAllowsRetry (0 ms)
+[ RUN      ] SettlementServiceTest.RejectsReentrantExecutionFromFaultProbe
+[       OK ] SettlementServiceTest.RejectsReentrantExecutionFromFaultProbe (0 ms)
+[ RUN      ] SettlementServiceTest.RepeatedRecipientAndInstitutionTransfersPreserveCash
+[       OK ] SettlementServiceTest.RepeatedRecipientAndInstitutionTransfersPreserveCash (0 ms)
+[ RUN      ] SettlementServiceTest.RejectedResultPublicationFailureDoesNotConsumeCommandId
+[       OK ] SettlementServiceTest.RejectedResultPublicationFailureDoesNotConsumeCommandId (0 ms)
+[ RUN      ] SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence
+[       OK ] SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence (0 ms)
+[----------] 17 tests from SettlementServiceTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 17 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 17 tests.
+
+### Independent final allocation and sequence probe (exit 0)
+mode=0 allocation_failures=7 final_success=1
+mode=1 allocation_failures=9 final_success=1
+reused_day_sequence_with_new_phase status=2 version=1
+
+### Initial independent probe: P2 sequence reuse before correction
+mode=0 allocation_failures=7 final_success=1
+mode=1 allocation_failures=9 final_success=1
+reused_day_sequence_with_new_phase status=0 version=2
+
+### Regression test BEFORE sequence correction (exit 1, expected reproduction)
+Running main() from /workspace/scratch/43766858b273/googletest/googletest/src/gtest_main.cc
+Note: Google Test filter = SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from SettlementServiceTest
+[ RUN      ] SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:278: Failure
+Expected equality of these values:
+  service.execute(transfer(2, 1, 1, 3, 5)).reason
+    Which is: 4-byte object <00-00 00-00>
+  SettlementReason::InvalidTime
+    Which is: 4-byte object <03-00 00-00>
+
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:279: Failure
+Expected equality of these values:
+  service.execute(transfer(3, 1, 1, 3, 4)).reason
+    Which is: 4-byte object <04-00 00-00>
+  SettlementReason::InvalidTime
+    Which is: 4-byte object <03-00 00-00>
+
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:280: Failure
+Expected equality of these values:
+  service.execute(transfer(4, 1, 1, 1, 6)).reason
+    Which is: 4-byte object <04-00 00-00>
+  SettlementReason::InvalidTime
+    Which is: 4-byte object <03-00 00-00>
+
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:281: Failure
+Expected equality of these values:
+  service.stateVersion()
+    Which is: 2
+  1
+
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:282: Failure
+Expected equality of these values:
+  service.balance(household).value()
+    Which is: 98
+  99
+
+/workspace/scratch/e3a57066464d/daily-1121-extra/tests/system_tests/settlement_service_test.cpp:283: Failure
+Expected equality of these values:
+  service.execute(transfer(5, 1, 1, 3, 6)).status
+    Which is: 4-byte object <02-00 00-00>
+  SettlementStatus::Succeeded
+    Which is: 4-byte object <00-00 00-00>
+
+[  FAILED  ] SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence (0 ms)
+[----------] 1 test from SettlementServiceTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] SettlementServiceTest.PhaseChangesCannotReuseOrReverseDailySequence
+
+ 1 FAILED TEST
+
+### CLI: build/MiddleAgeEconomySim --scenario balanced --days 3 --csv /tmp/maes-1121-extra/balanced.csv (exit 0)
+stdout:
+=== 中世経済シミュレーション開始 ===
+統合システム: 市場・政府・融資・貿易ルート
+
+開始時の総資金: 7000コイン
+
+=== Day 1 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が2個生産しました。在庫: 2
+小麦が2個、10コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 50
+農夫が小麦を10コインで購入しました。
+農夫の満足度が10ポイント上昇し、60になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 80
+商人が小麦を10コインで購入しました。
+商人の満足度が10ポイント上昇し、60になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 10コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 950コイン
+政府の支持率: 80%
+物価指数（基準日=100）: 100 | 前日比: 0%
+
+=== Day 2 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が2個生産しました。在庫: 2
+小麦が2個、10コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 90
+農夫が小麦を10コインで購入しました。
+農夫の満足度が10ポイント上昇し、70になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 150
+商人が小麦を10コインで購入しました。
+商人の満足度が10ポイント上昇し、70になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 10コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 900コイン
+政府の支持率: 85%
+物価指数（基準日=100）: 100 | 前日比: 0%
+
+=== Day 3 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が2個生産しました。在庫: 2
+小麦が2個、10コインで市場に出品されました。
+
+=== 政府活動 ===
+商人から税金を徴収しました。
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 130
+農夫が小麦を10コインで購入しました。
+農夫の満足度が10ポイント上昇し、80になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 206
+商人が小麦を10コインで購入しました。
+商人の満足度が10ポイント上昇し、80になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 10コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 864コイン
+政府の支持率: 89%
+物価指数（基準日=100）: 100 | 前日比: 0%
+
+=== シミュレーション結果 ===
+農夫 - 所持金: 120コイン, 満足度: 80
+商人 - 所持金: 196コイン, 満足度: 80
+政府最終資金: 864コイン
+政府最終支持率: 89%
+終了時の総資金: 7000コイン
+stderr:
+csv:
+day,price_index,change_percent,total_money
+1,100,0,7000
+2,100,0,7000
+3,100,0,7000
+
+### CLI: build/MiddleAgeEconomySim --scenario shortage --days 3 --csv /tmp/maes-1121-extra/shortage.csv (exit 0)
+stdout:
+=== 中世経済シミュレーション開始 ===
+統合システム: 市場・政府・融資・貿易ルート
+
+開始時の総資金: 7000コイン
+
+=== Day 1 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が1個生産しました。在庫: 1
+小麦が1個、10コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 50
+農夫が小麦を10コインで購入しました。
+農夫の満足度が10ポイント上昇し、60になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 80
+商人の満足度が5ポイント低下し、45になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 11コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 950コイン
+政府の支持率: 80%
+物価指数（基準日=100）: 110 | 前日比: 10%
+
+=== Day 2 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が1個生産しました。在庫: 1
+小麦が1個、11コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 90
+農夫が小麦を11コインで購入しました。
+農夫の満足度が10ポイント上昇し、70になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 160
+商人の満足度が5ポイント低下し、40になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 12コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 900コイン
+政府の支持率: 85%
+物価指数（基準日=100）: 120 | 前日比: 9.09091%
+
+=== Day 3 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が1個生産しました。在庫: 1
+小麦が1個、12コインで市場に出品されました。
+
+=== 政府活動 ===
+商人から税金を徴収しました。
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 129
+農夫が小麦を12コインで購入しました。
+農夫の満足度が10ポイント上昇し、80になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 224
+商人の満足度が5ポイント低下し、35になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 0個 (価格: 13コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 866コイン
+政府の支持率: 89%
+物価指数（基準日=100）: 130 | 前日比: 8.33333%
+
+=== シミュレーション結果 ===
+農夫 - 所持金: 117コイン, 満足度: 80
+商人 - 所持金: 224コイン, 満足度: 35
+政府最終資金: 866コイン
+政府最終支持率: 89%
+終了時の総資金: 7000コイン
+stderr:
+csv:
+day,price_index,change_percent,total_money
+1,110.00000000000001,10.000000000000009,7000
+2,120,9.0909090909090828,7000
+3,130,8.333333333333325,7000
+
+### CLI: build/MiddleAgeEconomySim --scenario oversupply --days 3 --csv /tmp/maes-1121-extra/oversupply.csv (exit 0)
+stdout:
+=== 中世経済シミュレーション開始 ===
+統合システム: 市場・政府・融資・貿易ルート
+
+開始時の総資金: 7000コイン
+
+=== Day 1 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が10個生産しました。在庫: 10
+小麦が10個、10コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 50
+農夫が小麦を10コインで購入しました。
+農夫の満足度が10ポイント上昇し、60になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 80
+商人が小麦を10コインで購入しました。
+商人の満足度が10ポイント上昇し、60になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 8個 (価格: 9コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 950コイン
+政府の支持率: 80%
+物価指数（基準日=100）: 90 | 前日比: -10%
+
+=== Day 2 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が10個生産しました。在庫: 18
+小麦が18個、9コインで市場に出品されました。
+
+=== 政府活動 ===
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 90
+農夫が小麦を9コインで購入しました。
+農夫の満足度が10ポイント上昇し、70になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 150
+商人が小麦を9コインで購入しました。
+商人の満足度が10ポイント上昇し、70になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 16個 (価格: 8コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 900コイン
+政府の支持率: 85%
+物価指数（基準日=100）: 80 | 前日比: -11.1111%
+
+=== Day 3 ===
+=== 1日の経済活動をシミュレート ===
+小麦の生産者が10個生産しました。在庫: 26
+小麦が26個、8コインで市場に出品されました。
+
+=== 政府活動 ===
+商人から税金を徴収しました。
+Service provided: 労働 for 50 coins
+農夫が50コインの収入を得ました。所持金: 131
+農夫が小麦を8コインで購入しました。
+農夫の満足度が10ポイント上昇し、80になりました。
+Service provided: 労働 for 80 coins
+商人が80コインの収入を得ました。所持金: 207
+商人が小麦を8コインで購入しました。
+商人の満足度が10ポイント上昇し、80になりました。
+
+=== 政府政策 ===
+小麦生産者(農業)に補助金を支給しました。
+
+=== 市場の状況 ===
+小麦: 24個 (価格: 7コイン)
+パン: 0個 (価格: 0コイン)
+道具: 0個 (価格: 0コイン)
+政府の資金: 864コイン
+政府の支持率: 89%
+物価指数（基準日=100）: 70 | 前日比: -12.5%
+
+=== シミュレーション結果 ===
+農夫 - 所持金: 123コイン, 満足度: 80
+商人 - 所持金: 199コイン, 満足度: 80
+政府最終資金: 864コイン
+政府最終支持率: 89%
+終了時の総資金: 7000コイン
+stderr:
+csv:
+day,price_index,change_percent,total_money
+1,90,-9.9999999999999982,7000
+2,80,-11.111111111111116,7000
+3,70,-12.5,7000
+
+### Parsed CLI checks (days, index rel_tol 1e-12, daily cash 7000 passed)
+[
+  {
+    "scenario": "balanced",
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "scenario": "shortage",
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "110.00000000000001",
+        "change_percent": "10.000000000000009",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "120",
+        "change_percent": "9.0909090909090828",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "130",
+        "change_percent": "8.333333333333325",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "scenario": "oversupply",
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "90",
+        "change_percent": "-9.9999999999999982",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "80",
+        "change_percent": "-11.111111111111116",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "70",
+        "change_percent": "-12.5",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "scenario": "invalid_days",
+    "exit_code": 1,
+    "stderr": "プログラム実行中に致命的なエラーが発生しました: Days must be an integer from 1 to 10000"
+  }
+]
