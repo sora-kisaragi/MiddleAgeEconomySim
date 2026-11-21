@@ -264,3 +264,25 @@ TEST_F(SettlementServiceTest, RejectedResultPublicationFailureDoesNotConsumeComm
     EXPECT_EQ(service.execute(input).reason, SettlementReason::Unauthorized);
     EXPECT_EQ(service.processedCount(), 1);
 }
+
+TEST_F(SettlementServiceTest, PhaseChangesCannotReuseOrReverseDailySequence) {
+    SettlementService service(registry, {{household, Money(100)}});
+    const auto transfer = [&](std::uint64_t id, std::uint64_t version,
+                              std::uint64_t day, unsigned int phase,
+                              std::uint64_t sequence) {
+        return CashTransferCommand{CommandId(id), std::string(64, 'a'), version,
+            GameTime(day, phase, sequence), person, person, household,
+            {{business, Money(1)}}};
+    };
+    ASSERT_EQ(service.execute(transfer(1, 0, 1, 2, 5)).status, SettlementStatus::Succeeded);
+    EXPECT_EQ(service.execute(transfer(2, 1, 1, 3, 5)).reason, SettlementReason::InvalidTime);
+    EXPECT_EQ(service.execute(transfer(3, 1, 1, 3, 4)).reason, SettlementReason::InvalidTime);
+    EXPECT_EQ(service.execute(transfer(4, 1, 1, 1, 6)).reason, SettlementReason::InvalidTime);
+    EXPECT_EQ(service.stateVersion(), 1);
+    EXPECT_EQ(service.balance(household).value(), 99);
+    ASSERT_EQ(service.execute(transfer(5, 1, 1, 3, 6)).status, SettlementStatus::Succeeded);
+    ASSERT_EQ(service.execute(transfer(6, 2, 1, 3, 7)).status, SettlementStatus::Succeeded);
+    ASSERT_EQ(service.execute(transfer(7, 3, 2, 1, 1)).status, SettlementStatus::Succeeded);
+    EXPECT_EQ(service.balance(household).value(), 96);
+    EXPECT_EQ(service.totalCash().value(), 100);
+}

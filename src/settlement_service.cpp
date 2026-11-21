@@ -31,6 +31,12 @@ bool validRequestHash(const std::string& hash) {
     });
 }
 
+bool follows(const GameTime& next, const GameTime& previous) {
+    if (next.day != previous.day) return next.day > previous.day;
+    return next.phase >= previous.phase &&
+           next.sequence_in_day > previous.sequence_in_day;
+}
+
 struct ExecutionGuard {
     bool& executing;
     explicit ExecutionGuard(bool& value) : executing(value) {
@@ -130,7 +136,7 @@ SettlementResult SettlementService::execute(const CashTransferCommand& command) 
         return reject(SettlementReason::StaleState);
     }
     if (command.time.day == 0 || command.time.sequence_in_day == 0 ||
-        (state_->last_time && !(state_->last_time.value() < command.time))) {
+        (state_->last_time && !follows(command.time, *state_->last_time))) {
         return reject(SettlementReason::InvalidTime);
     }
     if (state_->version == static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) {
