@@ -55,10 +55,56 @@ TEST(TransactionTest, AllowsZeroPriceAndRejectsTotalOverflow) {
                                  Quantity(5), Money(0), GameTime(8, 7, 6));
     EXPECT_EQ(free_trade.totalValue().value(), 0);
 
-    const Transaction overflowing(
+    EXPECT_THROW((Transaction(
         EventId(2), ActorId(2), ActorId(3), ProductId(4), Quantity(2),
-        Money(std::numeric_limits<std::int64_t>::max()), GameTime(8, 7, 7));
-    EXPECT_THROW(overflowing.totalValue(), std::overflow_error);
+        Money(std::numeric_limits<std::int64_t>::max()), GameTime(8, 7, 7))),
+        std::overflow_error);
+}
+
+TEST(TransactionTest, RejectsInitializationAndUnsequencedTradeTimes) {
+    for (const auto time : {GameTime(0, 0, 0), GameTime(0, 0, 1),
+                            GameTime(1, 1, 0)}) {
+        EXPECT_THROW((Transaction(EventId(1), ActorId(2), ActorId(3), ProductId(4),
+            Quantity(1), Money(10), time)), std::invalid_argument);
+    }
+}
+
+TEST(TransactionTest, HistoryInsertionRejectsInvalidRecordWithoutChangingHistory) {
+    std::vector<Transaction> history;
+    history.emplace_back(EventId(1), ActorId(2), ActorId(3), ProductId(4),
+                         Quantity(3), Money(10), GameTime(1, 8, 1));
+    EXPECT_THROW(history.emplace_back(EventId(2), ActorId(2), ActorId(3), ProductId(4),
+        Quantity(2), Money(std::numeric_limits<std::int64_t>::max()), GameTime(1, 8, 2)),
+        std::overflow_error);
+    EXPECT_THROW(history.emplace_back(EventId(2), ActorId(2), ActorId(3), ProductId(4),
+        Quantity(1), Money(10), GameTime(1, 8, 0)), std::invalid_argument);
+    ASSERT_EQ(history.size(), 1U);
+    EXPECT_EQ(history.front().eventId(), EventId(1));
+    EXPECT_EQ(history.front().totalValue(), Money(30));
+    EXPECT_EQ(history.front().committedAt(), GameTime(1, 8, 1));
+    history.emplace_back(EventId(2), ActorId(2), ActorId(3), ProductId(4),
+                         Quantity(2), Money(10), GameTime(1, 8, 2));
+    ASSERT_EQ(history.size(), 2U);
+    EXPECT_EQ(history.back().totalValue(), Money(20));
+}
+
+TEST(TransactionTest, MaximumTotalsRemainValidAcrossCopiesAssignmentAndCompaction) {
+    const auto max = std::numeric_limits<std::int64_t>::max();
+    const Transaction maximum(EventId(1), ActorId(2), ActorId(3), ProductId(4),
+        Quantity(max), Money(1), GameTime(static_cast<std::uint64_t>(max), 12,
+                                         static_cast<std::uint64_t>(max)));
+    EXPECT_EQ(maximum.totalValue(), Money(max));
+    const Transaction maximum_price(EventId(2), ActorId(2), ActorId(3), ProductId(4),
+        Quantity(1), Money(max), GameTime(1, 1, 1));
+    EXPECT_EQ(maximum_price.totalValue(), Money(max));
+    std::vector<Transaction> history{maximum, maximum_price};
+    history.erase(history.begin());
+    ASSERT_EQ(history.size(), 1U);
+    EXPECT_EQ(history.front().totalValue(), Money(max));
+    auto assigned = maximum;
+    assigned = history.front();
+    EXPECT_EQ(assigned.eventId(), maximum_price.eventId());
+    EXPECT_EQ(assigned.totalValue(), Money(max));
 }
 
 TEST(TransactionTest, EqualInputsProduceEqualPersistentFields) {

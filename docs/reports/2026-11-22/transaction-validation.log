@@ -1,0 +1,222 @@
+2026-11-22 JST / Issue #41
+Recording start: 2026-11-22 08:03:47 JST
+Base: 07d35e668cd582eb883536bb3c542563abf2fef6
+Local code: ce901fa7e7c6cac34e23c1c531eaf3d7f06c441b
+Public code: 3431c138f67c9b17a5f659c89980f4d2f4a79ff0
+Same tree: 7159789e8ad094370ec7dc3a029431efb7ef59da
+Environment: GCC14.2.0, C++17, CMake3.31.6, GoogleTest1.14.0
+Commands: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=/workspace/scratch/43766858b273/googletest; cmake --build build --parallel 4; ctest --test-dir build --output-on-failure
+Configure/build/CTest: exit 0.
+
+### Before fix (9 tests, 3 failures, exit 1)
+Running main() from /workspace/scratch/43766858b273/googletest/googletest/src/gtest_main.cc
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from TransactionTest
+[ RUN      ] TransactionTest.StoresTypedReferencesAndSimulationTime
+[       OK ] TransactionTest.StoresTypedReferencesAndSimulationTime (0 ms)
+[ RUN      ] TransactionTest.HasNoAbsentOrPartiallyInitializedRecord
+[       OK ] TransactionTest.HasNoAbsentOrPartiallyInitializedRecord (0 ms)
+[ RUN      ] TransactionTest.SupportsHistoryCompactionAsAValueRecord
+[       OK ] TransactionTest.SupportsHistoryCompactionAsAValueRecord (0 ms)
+[ RUN      ] TransactionTest.RejectsSelfTradeAndZeroQuantity
+[       OK ] TransactionTest.RejectsSelfTradeAndZeroQuantity (0 ms)
+[ RUN      ] TransactionTest.AllowsZeroPriceAndRejectsTotalOverflow
+tests/market_tests/transaction_test.cpp:58: Failure
+Expected: (Transaction( EventId(2), ActorId(2), ActorId(3), ProductId(4), Quantity(2), Money(std::numeric_limits<std::int64_t>::max()), GameTime(8, 7, 7))) throws an exception of type std::overflow_error.
+  Actual: it throws nothing.
+
+[  FAILED  ] TransactionTest.AllowsZeroPriceAndRejectsTotalOverflow (0 ms)
+[ RUN      ] TransactionTest.RejectsInitializationAndUnsequencedTradeTimes
+tests/market_tests/transaction_test.cpp:67: Failure
+Expected: (Transaction(EventId(1), ActorId(2), ActorId(3), ProductId(4), Quantity(1), Money(10), time)) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+
+tests/market_tests/transaction_test.cpp:67: Failure
+Expected: (Transaction(EventId(1), ActorId(2), ActorId(3), ProductId(4), Quantity(1), Money(10), time)) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+
+tests/market_tests/transaction_test.cpp:67: Failure
+Expected: (Transaction(EventId(1), ActorId(2), ActorId(3), ProductId(4), Quantity(1), Money(10), time)) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+
+[  FAILED  ] TransactionTest.RejectsInitializationAndUnsequencedTradeTimes (0 ms)
+[ RUN      ] TransactionTest.HistoryInsertionRejectsInvalidRecordWithoutChangingHistory
+tests/market_tests/transaction_test.cpp:76: Failure
+Expected: history.emplace_back(EventId(2), ActorId(2), ActorId(3), ProductId(4), Quantity(2), Money(std::numeric_limits<std::int64_t>::max()), GameTime(1, 8, 2)) throws an exception of type std::overflow_error.
+  Actual: it throws nothing.
+
+tests/market_tests/transaction_test.cpp:79: Failure
+Expected: history.emplace_back(EventId(2), ActorId(2), ActorId(3), ProductId(4), Quantity(1), Money(10), GameTime(1, 8, 0)) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+
+tests/market_tests/transaction_test.cpp:81: Failure
+Expected equality of these values:
+  history.size()
+    Which is: 3
+  1U
+    Which is: 1
+
+[  FAILED  ] TransactionTest.HistoryInsertionRejectsInvalidRecordWithoutChangingHistory (0 ms)
+[ RUN      ] TransactionTest.MaximumTotalsRemainValidAcrossCopiesAssignmentAndCompaction
+[       OK ] TransactionTest.MaximumTotalsRemainValidAcrossCopiesAssignmentAndCompaction (0 ms)
+[ RUN      ] TransactionTest.EqualInputsProduceEqualPersistentFields
+[       OK ] TransactionTest.EqualInputsProduceEqualPersistentFields (0 ms)
+[----------] 9 tests from TransactionTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 6 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] TransactionTest.AllowsZeroPriceAndRejectsTotalOverflow
+[  FAILED  ] TransactionTest.RejectsInitializationAndUnsequencedTradeTimes
+[  FAILED  ] TransactionTest.HistoryInsertionRejectsInvalidRecordWithoutChangingHistory
+
+ 3 FAILED TESTS
+
+### Final CTest (219/219, exit 0)
+        Start 219: TradeRouteTest.MultipleGoods
+219/219 Test #219: TradeRouteTest.MultipleGoods ................................................................   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 219
+
+Total Test time (real) =   0.71 sec
+
+### Independent TransactionTest (9/9, exit 0)
+Running main() from /workspace/scratch/43766858b273/googletest/googletest/src/gtest_main.cc
+Note: Google Test filter = TransactionTest.*
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from TransactionTest
+[ RUN      ] TransactionTest.StoresTypedReferencesAndSimulationTime
+[       OK ] TransactionTest.StoresTypedReferencesAndSimulationTime (0 ms)
+[ RUN      ] TransactionTest.HasNoAbsentOrPartiallyInitializedRecord
+[       OK ] TransactionTest.HasNoAbsentOrPartiallyInitializedRecord (0 ms)
+[ RUN      ] TransactionTest.SupportsHistoryCompactionAsAValueRecord
+[       OK ] TransactionTest.SupportsHistoryCompactionAsAValueRecord (0 ms)
+[ RUN      ] TransactionTest.RejectsSelfTradeAndZeroQuantity
+[       OK ] TransactionTest.RejectsSelfTradeAndZeroQuantity (0 ms)
+[ RUN      ] TransactionTest.AllowsZeroPriceAndRejectsTotalOverflow
+[       OK ] TransactionTest.AllowsZeroPriceAndRejectsTotalOverflow (0 ms)
+[ RUN      ] TransactionTest.RejectsInitializationAndUnsequencedTradeTimes
+[       OK ] TransactionTest.RejectsInitializationAndUnsequencedTradeTimes (0 ms)
+[ RUN      ] TransactionTest.HistoryInsertionRejectsInvalidRecordWithoutChangingHistory
+[       OK ] TransactionTest.HistoryInsertionRejectsInvalidRecordWithoutChangingHistory (0 ms)
+[ RUN      ] TransactionTest.MaximumTotalsRemainValidAcrossCopiesAssignmentAndCompaction
+[       OK ] TransactionTest.MaximumTotalsRemainValidAcrossCopiesAssignmentAndCompaction (0 ms)
+[ RUN      ] TransactionTest.EqualInputsProduceEqualPersistentFields
+[       OK ] TransactionTest.EqualInputsProduceEqualPersistentFields (0 ms)
+[----------] 9 tests from TransactionTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 9 tests.
+
+### Actual CLI commands/results
+[
+  {
+    "command": [
+      "build/MiddleAgeEconomySim",
+      "--scenario",
+      "balanced",
+      "--days",
+      "3",
+      "--csv",
+      "/tmp/maes-1122/balanced.csv"
+    ],
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "100",
+        "change_percent": "0",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "command": [
+      "build/MiddleAgeEconomySim",
+      "--scenario",
+      "shortage",
+      "--days",
+      "3",
+      "--csv",
+      "/tmp/maes-1122/shortage.csv"
+    ],
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "110.00000000000001",
+        "change_percent": "10.000000000000009",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "120",
+        "change_percent": "9.0909090909090828",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "130",
+        "change_percent": "8.333333333333325",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "command": [
+      "build/MiddleAgeEconomySim",
+      "--scenario",
+      "oversupply",
+      "--days",
+      "3",
+      "--csv",
+      "/tmp/maes-1122/oversupply.csv"
+    ],
+    "exit_code": 0,
+    "csv": [
+      {
+        "day": "1",
+        "price_index": "90",
+        "change_percent": "-9.9999999999999982",
+        "total_money": "7000"
+      },
+      {
+        "day": "2",
+        "price_index": "80",
+        "change_percent": "-11.111111111111116",
+        "total_money": "7000"
+      },
+      {
+        "day": "3",
+        "price_index": "70",
+        "change_percent": "-12.5",
+        "total_money": "7000"
+      }
+    ]
+  },
+  {
+    "command": [
+      "build/MiddleAgeEconomySim",
+      "--days",
+      "0"
+    ],
+    "exit_code": 1,
+    "stderr": "プログラム実行中に致命的なエラーが発生しました: Days must be an integer from 1 to 10000\n"
+  }
+]
