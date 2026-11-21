@@ -6,6 +6,8 @@ namespace economy {
 
 // A committed trade record uses run-scoped identifiers and simulation time.
 // Wall-clock time is deliberately excluded so equal runs produce equal records.
+// Construction validates the committed time and total before a record can enter
+// a history. Balance/stock changes must still be atomic at the settlement layer.
 class Transaction {
 public:
     Transaction(EventId event_id, ActorId seller_id, ActorId buyer_id,
@@ -13,6 +15,7 @@ public:
                 GameTime committed_at)
         : event_id_(event_id), seller_id_(seller_id), buyer_id_(buyer_id),
           product_id_(product_id), quantity_(quantity), unit_price_(unit_price),
+          total_value_(0),
           committed_day_(committed_at.day), committed_phase_(committed_at.phase),
           committed_sequence_in_day_(committed_at.sequence_in_day) {
         if (seller_id_ == buyer_id_) {
@@ -21,6 +24,10 @@ public:
         if (quantity_.value() == 0) {
             throw std::invalid_argument("transaction quantity must be positive");
         }
+        if (committed_day_ == 0 || committed_sequence_in_day_ == 0) {
+            throw std::invalid_argument("committed trade requires a sequenced simulation day");
+        }
+        total_value_ = unit_price_.multiply(quantity_.value());
     }
 
     EventId eventId() const noexcept { return event_id_; }
@@ -33,7 +40,7 @@ public:
         return GameTime(committed_day_, committed_phase_, committed_sequence_in_day_);
     }
 
-    Money totalValue() const { return unit_price_.multiply(quantity_.value()); }
+    Money totalValue() const noexcept { return total_value_; }
 
 private:
     EventId event_id_;
@@ -42,6 +49,7 @@ private:
     ProductId product_id_;
     Quantity quantity_;
     Money unit_price_;
+    Money total_value_;
     std::uint64_t committed_day_;
     std::uint8_t committed_phase_;
     std::uint64_t committed_sequence_in_day_;
