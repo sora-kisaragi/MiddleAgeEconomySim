@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -29,11 +30,37 @@ struct CashTransferCommand {
     std::vector<CashPayment> payments;
 };
 
+struct ProcessingRecipe {
+    std::map<ProductId, Quantity> inputs;
+    std::map<ProductId, Quantity> outputs;
+    Quantity labor_per_batch{0};
+};
+
+// Trusted, immutable configuration and opening inventory/labor for this
+// development path. It is not a mirror of legacy Business.stock.
+struct GoodsSetup {
+    std::set<ProductId> products;
+    std::map<std::string, ProcessingRecipe> recipes;
+    std::map<std::pair<ActorId, ProductId>, Quantity> balances;
+    std::map<ActorId, Quantity> labor;
+};
+
+struct GoodsProcessingCommand {
+    CommandId command_id;
+    std::string request_hash;
+    std::uint64_t expected_state_version;
+    GameTime time;
+    ActorId actor_id;
+    std::optional<ActorId> controller_person_id;
+    std::string recipe_id;
+    Quantity batches;
+};
+
 enum class SettlementStatus { Succeeded, PartiallySucceeded, Rejected };
 enum class SettlementReason {
     None, IdConflict, InvalidRequest, InvalidTime, StaleState,
     InvalidReference, Unauthorized, InactiveActor, InsufficientFunds,
-    AmountOverflow, VersionOverflow
+    AmountOverflow, VersionOverflow, InsufficientGoods, InsufficientLabor
 };
 
 struct SettlementResult {
@@ -47,7 +74,7 @@ struct SettlementResult {
 
 // Test-only fault injection at candidate mutation and publication boundaries.
 // A probe must not mutate the registry or call execute recursively.
-enum class SettlementStage { AfterDebit, AfterCredit, BeforePublish };
+enum class SettlementStage { AfterDebit, AfterCredit, BeforePublish, AfterInput, AfterOutput };
 using SettlementFaultProbe = std::function<void(SettlementStage)>;
 
 // Single-writer, in-memory command boundary. Registry lifetime must exceed the
@@ -57,12 +84,17 @@ class SettlementService {
 public:
     SettlementService(const ActorRegistry& registry,
                       const std::map<AccountId, Money>& initial_cash,
-                      SettlementFaultProbe fault_probe = {});
+                      SettlementFaultProbe fault_probe = {},
+                      GoodsSetup goods = {});
     ~SettlementService();
 
     // Economic rejections are saved once. Calculation/allocation exceptions
     // propagate without publishing assets or the command result.
     SettlementResult execute(const CashTransferCommand& command);
+    SettlementResult execute(const GoodsProcessingCommand& command);
+
+    Quantity goodsBalance(ActorId actor, ProductId product) const;
+    Quantity availableLabor(ActorId actor) const;
 
     Money balance(AccountId account) const;
     Money totalCash() const;
@@ -75,9 +107,12 @@ private:
     const ActorRegistry& registry_;
     std::unique_ptr<State> state_;
     SettlementFaultProbe fault_probe_;
+    const GoodsSetup goods_setup_;
     bool executing_ = false;
 
     void probe(SettlementStage stage) const;
+    template <typename Command>
+    SettlementResult executeCommand(const Command& command);
 };
 
 } // namespace economy

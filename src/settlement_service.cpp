@@ -4,6 +4,8 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <variant>
+#include <type_traits>
 
 namespace economy {
 namespace {
@@ -23,6 +25,13 @@ bool sameRequest(const CashTransferCommand& lhs, const CashTransferCommand& rhs)
         }
     }
     return true;
+}
+
+bool sameRequest(const GoodsProcessingCommand& lhs, const GoodsProcessingCommand& rhs) {
+    return lhs.request_hash == rhs.request_hash &&
+        lhs.expected_state_version == rhs.expected_state_version && lhs.time == rhs.time &&
+        lhs.actor_id == rhs.actor_id && lhs.controller_person_id == rhs.controller_person_id &&
+        lhs.recipe_id == rhs.recipe_id && lhs.batches == rhs.batches;
 }
 
 bool validRequestHash(const std::string& hash) {
@@ -49,10 +58,12 @@ struct ExecutionGuard {
 
 struct SettlementService::State {
     struct Record {
-        CashTransferCommand command;
+        std::variant<CashTransferCommand, GoodsProcessingCommand> command;
         SettlementResult result;
     };
     std::map<AccountId, Money> cash;
+    std::map<std::pair<ActorId, ProductId>, Quantity> goods;
+    std::map<ActorId, Quantity> labor;
     Money initial_total{0};
     std::uint64_t version = 0;
     std::optional<GameTime> last_time;
@@ -72,14 +83,40 @@ struct SettlementService::State {
 
 SettlementService::SettlementService(const ActorRegistry& registry,
                                    const std::map<AccountId, Money>& initial_cash,
-                                   SettlementFaultProbe fault_probe)
+                                   SettlementFaultProbe fault_probe, GoodsSetup goods)
     : registry_(registry), state_(std::make_unique<State>()),
-      fault_probe_(std::move(fault_probe)) {
+      fault_probe_(std::move(fault_probe)), goods_setup_(std::move(goods)) {
     for (const auto& entry : initial_cash) {
         registry_.account(entry.first);
         state_->cash.emplace(entry);
     }
     state_->initial_total = state_->total();
+    for (const auto& recipe : goods_setup_.recipes) {
+        if (recipe.first.empty() || recipe.second.inputs.empty() || recipe.second.outputs.empty() ||
+            recipe.second.labor_per_batch.value() == 0) {
+            throw std::invalid_argument("processing recipe needs inputs, outputs and labor");
+        }
+        for (const auto* lines : {&recipe.second.inputs, &recipe.second.outputs}) {
+            for (const auto& line : *lines) {
+                if (!goods_setup_.products.count(line.first) || line.second.value() == 0) {
+                    throw std::invalid_argument("invalid recipe product or quantity");
+                }
+            }
+        }
+    }
+    for (const auto& entry : goods_setup_.balances) {
+        registry_.actor(entry.first.first);
+        if (!goods_setup_.products.count(entry.first.second)) {
+            throw std::invalid_argument("unknown opening product");
+        }
+    }
+    for (const auto& entry : goods_setup_.labor) {
+        if (registry_.actor(entry.first).kind != ActorKind::Business) {
+            throw std::invalid_argument("processing labor belongs to a business");
+        }
+    }
+    state_->goods = goods_setup_.balances;
+    state_->labor = goods_setup_.labor;
 }
 
 SettlementService::~SettlementService() = default;
@@ -103,7 +140,29 @@ std::optional<SettlementResult> SettlementService::result(CommandId id) const {
         : std::optional<SettlementResult>(it->second.result);
 }
 
+Quantity SettlementService::goodsBalance(ActorId actor, ProductId product) const {
+    registry_.actor(actor);
+    if (!goods_setup_.products.count(product)) throw std::out_of_range("unknown product");
+    const auto it = state_->goods.find({actor, product});
+    return it == state_->goods.end() ? Quantity(0) : it->second;
+}
+
+Quantity SettlementService::availableLabor(ActorId actor) const {
+    registry_.actor(actor);
+    const auto it = state_->labor.find(actor);
+    return it == state_->labor.end() ? Quantity(0) : it->second;
+}
+
 SettlementResult SettlementService::execute(const CashTransferCommand& command) {
+    return executeCommand(command);
+}
+
+SettlementResult SettlementService::execute(const GoodsProcessingCommand& command) {
+    return executeCommand(command);
+}
+
+template <typename Command>
+SettlementResult SettlementService::executeCommand(const Command& command) {
     const ExecutionGuard guard(executing_);
     const auto rejected = [&](SettlementReason reason) {
         return SettlementResult{command.command_id, SettlementStatus::Rejected,
@@ -113,7 +172,8 @@ SettlementResult SettlementService::execute(const CashTransferCommand& command) 
     // remains authoritative even if assets or actor activity have since changed.
     const auto previous = state_->processed.find(command.command_id);
     if (previous != state_->processed.end()) {
-        return sameRequest(previous->second.command, command)
+        const auto* stored = std::get_if<Command>(&previous->second.command);
+        return stored && sameRequest(*stored, command)
             ? previous->second.result : rejected(SettlementReason::IdConflict);
     }
 
@@ -129,7 +189,7 @@ SettlementResult SettlementService::execute(const CashTransferCommand& command) 
     const auto reject = [&](SettlementReason reason) {
         return publish(std::make_unique<State>(*state_), rejected(reason));
     };
-    if (!validRequestHash(command.request_hash) || command.payments.empty()) {
+    if (!validRequestHash(command.request_hash)) {
         return reject(SettlementReason::InvalidRequest);
     }
     if (command.expected_state_version != state_->version) {
@@ -148,11 +208,17 @@ SettlementResult SettlementService::execute(const CashTransferCommand& command) 
     const auto validateSource = [&]() {
         try {
             const auto& actor = registry_.actor(command.actor_id);
-            const auto& source = registry_.account(command.source_account);
+            if constexpr (std::is_same_v<Command, CashTransferCommand>) {
+                if (registry_.account(command.source_account).owner_actor_id != actor.id) {
+                    return SettlementReason::Unauthorized;
+                }
+            } else if (actor.kind != ActorKind::Business) {
+                return SettlementReason::Unauthorized;
+            }
             if (!actor.active) return SettlementReason::InactiveActor;
             const auto controller = actor.kind == ActorKind::Person
                 ? std::optional<ActorId>(actor.id) : actor.owner_person_id;
-            if (source.owner_actor_id != actor.id || controller != command.controller_person_id) {
+            if (controller != command.controller_person_id) {
                 return SettlementReason::Unauthorized;
             }
             if (controller) {
@@ -170,36 +236,82 @@ SettlementResult SettlementService::execute(const CashTransferCommand& command) 
     if (sourceReason != SettlementReason::None) return reject(sourceReason);
 
     Money total(0);
-    for (const auto& payment : command.payments) {
-        if (payment.amount.value() == 0 || payment.account_id == command.source_account) {
+    auto candidate = std::make_unique<State>(*state_);
+    if constexpr (std::is_same_v<Command, GoodsProcessingCommand>) {
+        if (command.time.phase != 6 || command.batches.value() == 0) {
             return reject(SettlementReason::InvalidRequest);
         }
+        const auto recipe = goods_setup_.recipes.find(command.recipe_id);
+        if (recipe == goods_setup_.recipes.end()) return reject(SettlementReason::InvalidReference);
+        Quantity labor(0);
+        std::map<ProductId, Quantity> inputs, outputs;
         try {
-            total = total.add(payment.amount);
+            labor = recipe->second.labor_per_batch.multiply(command.batches.value());
+            for (const auto& line : recipe->second.inputs) {
+                inputs.emplace(line.first, line.second.multiply(command.batches.value()));
+            }
+            for (const auto& line : recipe->second.outputs) {
+                outputs.emplace(line.first, line.second.multiply(command.batches.value()));
+            }
         } catch (const std::overflow_error&) {
             return reject(SettlementReason::AmountOverflow);
         }
-    }
-    if (total.value() > state_->balance(command.source_account).value()) {
-        return reject(SettlementReason::InsufficientFunds);
-    }
-
-    auto candidate = std::make_unique<State>(*state_);
-    candidate->cash.insert_or_assign(command.source_account,
-        candidate->balance(command.source_account).subtract(total));
-    probe(SettlementStage::AfterDebit);
-    for (const auto& payment : command.payments) {
-        bool active = false;
-        try {
-            const auto& account = registry_.account(payment.account_id);
-            active = registry_.actor(account.owner_actor_id).active;
-        } catch (const std::out_of_range&) {
-            return reject(SettlementReason::InvalidReference);
+        if (labor.value() > availableLabor(command.actor_id).value()) {
+            return reject(SettlementReason::InsufficientLabor);
         }
-        if (!active) return reject(SettlementReason::InactiveActor);
-        candidate->cash.insert_or_assign(payment.account_id,
-            candidate->balance(payment.account_id).add(payment.amount));
-        probe(SettlementStage::AfterCredit);
+        candidate->labor.insert_or_assign(command.actor_id,
+            availableLabor(command.actor_id).subtract(labor));
+        for (const auto& input : inputs) {
+            const auto before = goodsBalance(command.actor_id, input.first);
+            if (input.second.value() > before.value()) return reject(SettlementReason::InsufficientGoods);
+            candidate->goods.insert_or_assign({command.actor_id, input.first}, before.subtract(input.second));
+            probe(SettlementStage::AfterInput);
+        }
+        for (const auto& output : outputs) {
+            const auto key = std::make_pair(command.actor_id, output.first);
+            const auto it = candidate->goods.find(key);
+            const auto before = it == candidate->goods.end() ? Quantity(0) : it->second;
+            Quantity after(0);
+            try {
+                after = before.add(output.second);
+            } catch (const std::overflow_error&) {
+                return reject(SettlementReason::AmountOverflow);
+            }
+            candidate->goods.insert_or_assign(key, after);
+            probe(SettlementStage::AfterOutput);
+        }
+    } else {
+        if (command.payments.empty()) return reject(SettlementReason::InvalidRequest);
+        for (const auto& payment : command.payments) {
+            if (payment.amount.value() == 0 || payment.account_id == command.source_account) {
+                return reject(SettlementReason::InvalidRequest);
+            }
+            try {
+                total = total.add(payment.amount);
+            } catch (const std::overflow_error&) {
+                return reject(SettlementReason::AmountOverflow);
+            }
+        }
+        if (total.value() > state_->balance(command.source_account).value()) {
+            return reject(SettlementReason::InsufficientFunds);
+        }
+
+        candidate->cash.insert_or_assign(command.source_account,
+            candidate->balance(command.source_account).subtract(total));
+        probe(SettlementStage::AfterDebit);
+        for (const auto& payment : command.payments) {
+            bool active = false;
+            try {
+                const auto& account = registry_.account(payment.account_id);
+                active = registry_.actor(account.owner_actor_id).active;
+            } catch (const std::out_of_range&) {
+                return reject(SettlementReason::InvalidReference);
+            }
+            if (!active) return reject(SettlementReason::InactiveActor);
+            candidate->cash.insert_or_assign(payment.account_id,
+                candidate->balance(payment.account_id).add(payment.amount));
+            probe(SettlementStage::AfterCredit);
+        }
     }
     if (!(candidate->total() == candidate->initial_total)) {
         throw std::logic_error("settlement violates cash conservation");
