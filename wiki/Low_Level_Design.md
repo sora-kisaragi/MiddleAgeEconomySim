@@ -555,6 +555,26 @@ flowchart TD
 供給過剰なら価格が下がり、購入希望が供給を超えると価格が上がる。
 整数への丸めと上下限は§6.1に従う。
 
+#### 9.1a 実CLIの識別子・日境界トレース（#41）
+
+`--timeline PATH` は `event_id,event_type,actor_id,day,phase,sequence_in_day` の
+診断CSVを出力する。初期登録はActorRegistryが実際のAgentへ割り当てるActorIdを
+昇順で並べ、Day 0/phase 0/連番1以降でACTOR_REGISTEREDを記録する。
+日次呼出しの直前にDAY_STARTED（phase 1）、simulateDay・物価観測・指定された
+日次CSV出力が成功した後にDAY_COMPLETED（phase 12）を記録する。
+GameTimeSequencerの日内連番は1/2、翌日は1へ戻る。EventIdは出力先や実時計に
+依存せず1から単調増加する。対象なしのactor_idは空欄、整数は十進表記とする。
+
+日次失敗では完了行を記録しない。トレース書込/flush失敗は例外をCLIへ伝播して
+非0終了する。CSV観測とトレースは別ファイルとし、同じパス・同じ既存ファイルを
+指す場合は切詰め前に拒否する。出力先を省略した従来の観測CSV形式は維持する。
+
+トレースは日境界だけを扱い、日中の全12段階・取引・CommandId・LoanId等をまだ
+採番しない。日末後のdemo追加実例も対象外である。DAY_COMPLETEDは耐久化済み
+DayCommittedを意味せず、複数出力の原子的公開や途中書込の復元は保証しない。
+書込失敗後は同じ実行を継続/再送せず停止する。#41全体の再現性、#55の日次12段階、
+#56の永続ジャーナルは引き続き未完である。
+
 #### 9.2 取引フロー
 
 確定取引の値型 `economy::Transaction` は、EventId・売手/買手ActorId・
