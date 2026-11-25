@@ -56,6 +56,32 @@ struct GoodsProcessingCommand {
     Quantity batches;
 };
 
+// Only trusted simulation drivers issue these commands. Production coefficients
+// and phase scheduling belong to the driver, not a decision policy.
+enum class GoodsFlowKind { Production, Transfer, Consumption, Disposal };
+struct GoodsFlowCommand {
+    CommandId command_id;
+    std::string request_hash;
+    std::uint64_t expected_state_version;
+    GameTime time;
+    ActorId actor_id;
+    std::optional<ActorId> controller_person_id;
+    GoodsFlowKind kind;
+    ProductId product_id;
+    Quantity quantity;
+    std::optional<ActorId> recipient;
+};
+
+enum class GoodsEntryKind { Production, Receipt, Delivery, Input, Consumption, Disposal };
+struct GoodsEntry {
+    CommandId command_id;
+    GameTime time;
+    ActorId actor_id;
+    ProductId product_id;
+    GoodsEntryKind kind;
+    Quantity quantity;
+};
+
 enum class SettlementStatus { Succeeded, PartiallySucceeded, Rejected };
 enum class SettlementReason {
     None, IdConflict, InvalidRequest, InvalidTime, StaleState,
@@ -92,6 +118,10 @@ public:
     // propagate without publishing assets or the command result.
     SettlementResult execute(const CashTransferCommand& command);
     SettlementResult execute(const GoodsProcessingCommand& command);
+
+    SettlementResult execute(const GoodsFlowCommand& command);
+    // Snapshot by value: callers cannot alter committed entries.
+    std::vector<GoodsEntry> goodsHistory() const;
 
     Quantity goodsBalance(ActorId actor, ProductId product) const;
     Quantity availableLabor(ActorId actor) const;
