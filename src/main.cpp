@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <filesystem>
+#include "system/runtime_timeline.h"
 #include "system/daily_csv_writer.h"
 #include "system/simulation.h"
 #include "market/price_index.h"
@@ -13,10 +15,20 @@ int main(int argc, char* argv[]) {
         for (int index = 1; index < argc; ++index) arguments.emplace_back(argv[index]);
         const auto options = parseSimulationOptions(arguments);
         if (options.help) {
-            std::cout << "Usage: MiddleAgeEconomySim [--scenario demo|balanced|shortage|oversupply] [--days 1..10000] [--csv PATH]\n";
+            std::cout << "Usage: MiddleAgeEconomySim [--scenario demo|balanced|shortage|oversupply] [--days 1..10000] [--csv PATH] [--timeline PATH]\n";
             return 0;
         }
         std::ofstream csv_file;
+        std::ofstream timeline_file;
+        std::unique_ptr<RuntimeTimeline> timeline;
+        if (!options.csv_path.empty() && !options.timeline_path.empty()) {
+            const auto csv = std::filesystem::weakly_canonical(options.csv_path);
+            const auto trace = std::filesystem::weakly_canonical(options.timeline_path);
+            if (csv == trace || (std::filesystem::exists(csv) && std::filesystem::exists(trace) &&
+                               std::filesystem::equivalent(csv, trace))) {
+                throw std::invalid_argument("Observation and timeline CSV paths must differ");
+            }
+        }
         std::unique_ptr<DailyCsvWriter> csv_writer;
         if (!options.csv_path.empty()) {
             csv_file.open(options.csv_path);
@@ -90,6 +102,13 @@ int main(int argc, char* argv[]) {
                                  "person:merchant");
     }
     const auto actor_registry = economy::ActorRegistry::fromSpecs(actor_specs);
+    if (!options.timeline_path.empty()) {
+        timeline_file.open(options.timeline_path);
+        if (!timeline_file) throw std::runtime_error("Cannot open runtime timeline CSV: " + options.timeline_path);
+        std::vector<economy::ActorId> ids;
+        for (const auto& spec : actor_specs) ids.push_back(actor_registry.actorByKey(spec.key).id);
+        timeline = std::make_unique<RuntimeTimeline>(timeline_file, std::move(ids));
+    }
     const auto actor_id = [&](const std::string& key) {
         return actor_registry.actorByKey(key).id;
     };
@@ -122,7 +141,8 @@ int main(int argc, char* argv[]) {
 
     // シミュレーション実行
     for (int day = 1; day <= options.days; ++day) {
-        const economy::GameTime day_start(static_cast<std::uint64_t>(day), 1, 0);
+        const auto day_start = timeline ? timeline->beginDay(static_cast<std::uint64_t>(day))
+            : economy::GameTime(static_cast<std::uint64_t>(day), 1, 0);
         std::cout << "\n=== Day " << day_start.day << " ===\n";
         if (!simulateDay(people, businesses, market, government, loan_provider, trade_routes)) {
             std::cerr << "Day " << day << " の処理が完了しなかったため終了します。\n";
@@ -130,6 +150,7 @@ int main(int argc, char* argv[]) {
         }
         const auto observation = price_index.observe(market);
         if (csv_writer) csv_writer->writeDay(day, observation, total_money());
+        if (timeline) timeline->completeDay(static_cast<std::uint64_t>(day));
         std::cout << "物価指数（基準日=100）: " << observation.value
                   << " | 前日比: " << observation.change_percent << "%\n";
     }

@@ -42,6 +42,10 @@ if(TARGET ${PROJECT_NAME})
     COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:${PROJECT_NAME}>"
       "-DFAILURE_PROGRAM=$<TARGET_FILE:simulation_failure_cli>"
       "-DOUTPUT_DIR=${CMAKE_BINARY_DIR}/csv-cli-test" -P "${CMAKE_SOURCE_DIR}/tests/cli_csv.cmake")
+  add_test(NAME CliScenario.Timeline
+    COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:${PROJECT_NAME}>"
+      "-DFAILURE_PROGRAM=$<TARGET_FILE:simulation_failure_cli>"
+      "-DOUTPUT_DIR=${CMAKE_BINARY_DIR}/timeline-cli-test" -P "${CMAKE_SOURCE_DIR}/tests/cli_timeline.cmake")
   foreach(scenario balanced shortage oversupply)
     add_test(NAME CliScenario.${scenario}
       COMMAND ${CMAKE_COMMAND} "-DPROGRAM=$<TARGET_FILE:${PROJECT_NAME}>"

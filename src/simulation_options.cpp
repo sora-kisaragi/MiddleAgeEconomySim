@@ -8,7 +8,7 @@ SimulationOptions parseSimulationOptions(const std::vector<std::string>& argumen
         const auto& argument = arguments[index];
         if (argument == "--help") {
             options.help = true;
-        } else if (argument == "--days" || argument == "--scenario" || argument == "--csv") {
+        } else if (argument == "--days" || argument == "--scenario" || argument == "--csv" || argument == "--timeline") {
             if (++index == arguments.size()) throw std::invalid_argument("Option requires a value");
             const auto& value = arguments[index];
             if (argument == "--days") {
@@ -17,6 +17,9 @@ SimulationOptions parseSimulationOptions(const std::vector<std::string>& argumen
                     options.days < 1 || options.days > 10000) {
                     throw std::invalid_argument("Days must be an integer from 1 to 10000");
                 }
+            } else if (argument == "--timeline") {
+                if (value.empty()) throw std::invalid_argument("Timeline path must not be empty");
+                options.timeline_path = value;
             } else if (argument == "--csv") {
                 if (value.empty()) throw std::invalid_argument("CSV path must not be empty");
                 options.csv_path = value;
