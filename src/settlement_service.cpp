@@ -34,6 +34,14 @@ bool sameRequest(const GoodsProcessingCommand& lhs, const GoodsProcessingCommand
         lhs.recipe_id == rhs.recipe_id && lhs.batches == rhs.batches;
 }
 
+bool sameRequest(const GoodsFlowCommand& lhs, const GoodsFlowCommand& rhs) {
+    return lhs.request_hash == rhs.request_hash &&
+        lhs.expected_state_version == rhs.expected_state_version && lhs.time == rhs.time &&
+        lhs.actor_id == rhs.actor_id && lhs.controller_person_id == rhs.controller_person_id &&
+        lhs.kind == rhs.kind && lhs.product_id == rhs.product_id &&
+        lhs.quantity == rhs.quantity && lhs.recipient == rhs.recipient;
+}
+
 bool validRequestHash(const std::string& hash) {
     return hash.size() == 64 && std::all_of(hash.begin(), hash.end(), [](char c) {
         return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
@@ -58,12 +66,13 @@ struct ExecutionGuard {
 
 struct SettlementService::State {
     struct Record {
-        std::variant<CashTransferCommand, GoodsProcessingCommand> command;
+        std::variant<CashTransferCommand, GoodsProcessingCommand, GoodsFlowCommand> command;
         SettlementResult result;
     };
     std::map<AccountId, Money> cash;
     std::map<std::pair<ActorId, ProductId>, Quantity> goods;
     std::map<ActorId, Quantity> labor;
+    std::vector<GoodsEntry> goods_history;
     Money initial_total{0};
     std::uint64_t version = 0;
     std::optional<GameTime> last_time;
@@ -161,6 +170,14 @@ SettlementResult SettlementService::execute(const GoodsProcessingCommand& comman
     return executeCommand(command);
 }
 
+SettlementResult SettlementService::execute(const GoodsFlowCommand& command) {
+    return executeCommand(command);
+}
+
+std::vector<GoodsEntry> SettlementService::goodsHistory() const {
+    return state_->goods_history;
+}
+
 template <typename Command>
 SettlementResult SettlementService::executeCommand(const Command& command) {
     const ExecutionGuard guard(executing_);
@@ -212,7 +229,9 @@ SettlementResult SettlementService::executeCommand(const Command& command) {
                 if (registry_.account(command.source_account).owner_actor_id != actor.id) {
                     return SettlementReason::Unauthorized;
                 }
-            } else if (actor.kind != ActorKind::Business) {
+            } else if constexpr (std::is_same_v<Command, GoodsProcessingCommand>) {
+                if (actor.kind != ActorKind::Business) return SettlementReason::Unauthorized;
+            } else if (command.kind == GoodsFlowKind::Production && actor.kind != ActorKind::Business) {
                 return SettlementReason::Unauthorized;
             }
             if (!actor.active) return SettlementReason::InactiveActor;
@@ -237,7 +256,67 @@ SettlementResult SettlementService::executeCommand(const Command& command) {
 
     Money total(0);
     auto candidate = std::make_unique<State>(*state_);
-    if constexpr (std::is_same_v<Command, GoodsProcessingCommand>) {
+    const auto recordGoods = [&](ActorId actor, ProductId product,
+                                 GoodsEntryKind kind, Quantity quantity) {
+        candidate->goods_history.push_back({command.command_id, command.time,
+                                            actor, product, kind, quantity});
+    };
+    if constexpr (std::is_same_v<Command, GoodsFlowCommand>) {
+        if (command.quantity.value() == 0) return reject(SettlementReason::InvalidRequest);
+        if (!goods_setup_.products.count(command.product_id)) {
+            return reject(SettlementReason::InvalidReference);
+        }
+        switch (command.kind) {
+        case GoodsFlowKind::Production:
+        case GoodsFlowKind::Consumption:
+        case GoodsFlowKind::Disposal:
+            if (command.recipient) return reject(SettlementReason::InvalidRequest);
+            break;
+        case GoodsFlowKind::Transfer:
+            if (!command.recipient || *command.recipient == command.actor_id) {
+                return reject(SettlementReason::InvalidRequest);
+            }
+            try {
+                if (!registry_.actor(*command.recipient).active) {
+                    return reject(SettlementReason::InactiveActor);
+                }
+            } catch (const std::out_of_range&) {
+                return reject(SettlementReason::InvalidReference);
+            }
+            break;
+        default:
+            return reject(SettlementReason::InvalidRequest);
+        }
+        const auto before = goodsBalance(command.actor_id, command.product_id);
+        const auto key = std::make_pair(command.actor_id, command.product_id);
+        if (command.kind == GoodsFlowKind::Production) {
+            try {
+                candidate->goods.insert_or_assign(key, before.add(command.quantity));
+            } catch (const std::overflow_error&) {
+                return reject(SettlementReason::AmountOverflow);
+            }
+            recordGoods(command.actor_id, command.product_id, GoodsEntryKind::Production, command.quantity);
+            probe(SettlementStage::AfterOutput);
+        } else {
+            if (before.value() < command.quantity.value()) return reject(SettlementReason::InsufficientGoods);
+            candidate->goods.insert_or_assign(key, before.subtract(command.quantity));
+            const auto kind = command.kind == GoodsFlowKind::Transfer ? GoodsEntryKind::Delivery
+                : command.kind == GoodsFlowKind::Consumption ? GoodsEntryKind::Consumption : GoodsEntryKind::Disposal;
+            recordGoods(command.actor_id, command.product_id, kind, command.quantity);
+            probe(SettlementStage::AfterInput);
+            if (command.kind == GoodsFlowKind::Transfer) {
+                const auto recipient = *command.recipient;
+                try {
+                    candidate->goods.insert_or_assign({recipient, command.product_id},
+                        goodsBalance(recipient, command.product_id).add(command.quantity));
+                } catch (const std::overflow_error&) {
+                    return reject(SettlementReason::AmountOverflow);
+                }
+                recordGoods(recipient, command.product_id, GoodsEntryKind::Receipt, command.quantity);
+                probe(SettlementStage::AfterOutput);
+            }
+        }
+    } else if constexpr (std::is_same_v<Command, GoodsProcessingCommand>) {
         if (command.time.phase != 6 || command.batches.value() == 0) {
             return reject(SettlementReason::InvalidRequest);
         }
@@ -265,6 +344,7 @@ SettlementResult SettlementService::executeCommand(const Command& command) {
             const auto before = goodsBalance(command.actor_id, input.first);
             if (input.second.value() > before.value()) return reject(SettlementReason::InsufficientGoods);
             candidate->goods.insert_or_assign({command.actor_id, input.first}, before.subtract(input.second));
+            recordGoods(command.actor_id, input.first, GoodsEntryKind::Input, input.second);
             probe(SettlementStage::AfterInput);
         }
         for (const auto& output : outputs) {
@@ -278,6 +358,7 @@ SettlementResult SettlementService::executeCommand(const Command& command) {
                 return reject(SettlementReason::AmountOverflow);
             }
             candidate->goods.insert_or_assign(key, after);
+            recordGoods(command.actor_id, output.first, GoodsEntryKind::Production, output.second);
             probe(SettlementStage::AfterOutput);
         }
     } else {
