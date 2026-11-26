@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <cstdint>
 #include <cmath>
 #include <limits>
@@ -20,6 +21,8 @@ private:
     std::map<std::string, int> opening_price;
     std::map<std::string, int> unassigned_stock;
     std::map<const Business*, std::map<std::string, int>> seller_listings;
+    std::shared_ptr<RuntimeGoods> runtime_goods;
+    std::map<std::string, std::set<economy::ActorId>> ownership_listings;
     float price_volatility;
     
     static constexpr float MAX_VOLATILITY = 2.0f;    // Cap volatility to prevent instability
@@ -27,6 +30,24 @@ private:
 public:
     Market() : price_volatility(0.1f) {}
     
+    void bindGoods(std::shared_ptr<RuntimeGoods> goods) { runtime_goods = std::move(goods); }
+    void beginGoodsDay() {
+        if (!runtime_goods) return;
+        runtime_goods->beginDay();
+    }
+    void captureGoodsSupply() {
+        if (!runtime_goods) return;
+        for (const auto& row : price) daily_supply[row.first] = getStock(row.first);
+    }
+    bool hasGoodsLedger() const { return bool(runtime_goods); }
+    void listOwner(Business& business) {
+        if (!runtime_goods || business.runtime_goods != runtime_goods) throw std::logic_error("wrong goods ledger");
+        if (!business.id || !runtime_goods->isActiveBusiness(*business.id))
+            throw std::invalid_argument("listing requires active registered business");
+        runtime_goods->balance(*business.id, business.product);
+        ownership_listings[business.product].insert(*business.id);
+    }
+
     // Getter methods for encapsulated data
     float getPriceVolatility() const { return price_volatility; }
     void setPriceVolatility(float volatility) { 
@@ -40,6 +61,17 @@ public:
     }
 
     int getStock(const std::string& product) const {
+        if (runtime_goods) {
+            std::int64_t total = 0;
+            const auto owners = ownership_listings.find(product);
+            if (owners != ownership_listings.end()) for (const auto owner : owners->second) {
+                if (!runtime_goods->isActiveBusiness(owner)) continue;
+                const auto amount = runtime_goods->balance(owner, product);
+                if (amount > std::numeric_limits<int>::max() - total) throw std::overflow_error("listing total overflow");
+                total += amount;
+            }
+            return static_cast<int>(total);
+        }
         auto it = stock.find(product);
         return it != stock.end() ? it->second : 0;
     }
@@ -62,6 +94,28 @@ public:
     bool transact(Person* buyer, Business* seller, const std::string& product, int quantity) {
         if (!buyer || !seller || product.empty() || seller->product != product || quantity <= 0) return false;
         
+        if (runtime_goods) {
+            if (buyer->runtime_goods != runtime_goods || seller->runtime_goods != runtime_goods ||
+                !buyer->id || !seller->id) return false;
+            const auto owners = ownership_listings.find(product);
+            if (owners == ownership_listings.end() || !owners->second.count(*seller->id)) return false;
+            auto quoted = price.find(product);
+            if (quoted == price.end()) return false;
+            const auto cost = static_cast<std::int64_t>(quoted->second) * quantity;
+            if (buyer->money < cost || buyer->money < 0 || seller->money < 0 ||
+                seller->money > std::numeric_limits<std::int64_t>::max() - cost) return false;
+            if (daily_demand[product] > std::numeric_limits<std::int64_t>::max() - quantity) return false;
+            if (seller->goodsStock() < quantity) { addDemand(product, quantity); return false; }
+            // All cash checks and map allocations precede goods publication.
+            // Integer assignments below cannot throw; no callbacks run between them.
+            auto& demand = daily_demand[product];
+            if (!runtime_goods->move(*seller->id, product, quantity,
+                    economy::GoodsFlowKind::Transfer, buyer->id)) return false;
+            buyer->money -= cost;
+            seller->money += cost;
+            demand += quantity;
+            return true;
+        }
         if (seller->stock < 0) return false;
         auto price_it = price.find(product);
         if (price_it == price.end() && (seller->price <= 0 || seller->price > std::numeric_limits<int>::max())) {
@@ -121,6 +175,7 @@ public:
     }
 
     bool sell(const std::string& product, int quantity, int price) {
+        if (runtime_goods) return false;
         if (product.empty() || quantity <= 0 || price <= 0 || getStock(product) > std::numeric_limits<int>::max() - quantity) {
             return false;
         }
@@ -133,6 +188,7 @@ public:
     }
 
     int buy(const std::string& product, int quantity) {
+        if (runtime_goods) throw std::logic_error("bound purchase needs owner and buyer");
         if (quantity <= 0) {
             throw std::invalid_argument("Quantity must be positive");
         }
@@ -161,7 +217,7 @@ public:
             updatePrice(product);
             opening_price[product] = price[product];
             daily_demand[product] = 0;
-            daily_supply[product] = stock[product];
+            daily_supply[product] = getStock(product);
             unassigned_stock[product] = stock[product];
         }
         seller_listings.clear();

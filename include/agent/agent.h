@@ -9,11 +9,13 @@
 #include <string>
 
 #include "core/economy_types.h"
+#include "core/runtime_goods.h"
 
 class Agent {
 public:
     std::optional<economy::ActorId> id;
     int64_t money;
+    std::shared_ptr<RuntimeGoods> runtime_goods;
 
     Agent() : id(std::nullopt), money(0) {}
     virtual ~Agent() = default; // Add virtual destructor for polymorphic classes

@@ -14,6 +14,7 @@ bool Agent::transferMoneyTo(Agent* recipient, int64_t amount) {
 }
 
 bool Agent::directTrade(Agent* other, const std::string& item, int quantity, int64_t price) {
+    if (runtime_goods || (other && other->runtime_goods)) return false;
     if (!canInteractWith(other) || quantity <= 0 || price < 0 ||
         price > std::numeric_limits<int64_t>::max() / quantity) {
         return false;

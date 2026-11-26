@@ -24,11 +24,11 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
         for (const auto& business : businesses) {
             if (business.product.empty() || business.price <= 0 ||
                 business.price > std::numeric_limits<int>::max() ||
-                business.daily_production < 0 || business.stock < 0 ||
-                business.stock > std::numeric_limits<int>::max() - business.daily_production) {
+                business.daily_production < 0 || business.goodsStock() < 0 ||
+                business.goodsStock() > std::numeric_limits<int>::max() - business.daily_production) {
                 throw std::invalid_argument("Invalid business product, price, stock or production");
             }
-            const int quantity = business.stock + business.daily_production;
+            const int quantity = business.goodsStock() + business.daily_production;
             auto& total = offered_stock[business.product];
             if (total > std::numeric_limits<int>::max() - quantity) {
                 throw std::overflow_error("Combined product inventory exceeds market range");
@@ -36,11 +36,12 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
             total += quantity;
         }
 
+        market.beginGoodsDay();
         // 生産活動
         for (auto& business : businesses) {
             int production = business.daily_production;
-            business.stock += production;
-            std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.stock << "\n";
+            business.produceGoods(production);
+            std::cout << business.product << "の生産者が" << production << "個生産しました。在庫: " << business.goodsStock() << "\n";
         }
         
         // 貿易ルートによる商品移動
@@ -65,12 +66,15 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
             const int quoted_price = market.getPrice(business.product);
             market.registerProduct(business.product, quoted_price > 0 ? quoted_price : static_cast<int>(business.price));
         }
-        if (business.stock > 0 && !market.sell(business.product, business.stock, static_cast<int>(business.price))) {
+        if (market.hasGoodsLedger()) { market.listOwner(business); }
+        else if (business.goodsStock() > 0 && !market.sell(business.product, business.goodsStock(), static_cast<int>(business.price))) {
             throw std::overflow_error("Cannot list business inventory");
         }
-        std::cout << business.product << "が" << business.stock << "個、"
+        std::cout << business.product << "が" << business.goodsStock() << "個、"
                   << market.getPrice(business.product) << "コインで市場に出品されました。\n";
     }
+
+    market.captureGoodsSupply();
 
     // 政府による税収
     std::cout << "\n=== 政府活動 ===\n";
@@ -105,7 +109,7 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
         try {
             if (market.getPrice(food) > 0 && person.money >= market.getPrice(food)) {
                 auto seller = std::find_if(businesses.begin(), businesses.end(), [&](const Business& business) {
-                    return business.product == food && business.stock > 0;
+                    return business.product == food && business.goodsStock() > 0;
                 });
                 if (seller == businesses.end()) {
                     seller = std::find_if(businesses.begin(), businesses.end(), [&](const Business& business) {
@@ -114,7 +118,7 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
                 }
                 const int cost = market.getPrice(food);
                 if (seller != businesses.end() && market.transact(&person, &*seller, food, 1)) {
-                    person.inventory.push_back(food);
+                    if (!person.runtime_goods) person.inventory.push_back(food);
                     std::cout << person.name << "が" << food << "を" << cost << "コインで購入しました。\n";
                 }
             }

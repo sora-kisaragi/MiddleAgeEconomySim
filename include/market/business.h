@@ -41,6 +41,21 @@ public:
         setMarketShare(share);
     }
     
+    std::int64_t goodsStock() const {
+        return runtime_goods ? runtime_goods->balance(id.value(), product) : stock;
+    }
+    void produceGoods(int quantity) {
+        if (quantity < 0) throw std::invalid_argument("negative production");
+        if (!quantity) return;
+        if (runtime_goods) {
+            if (!runtime_goods->move(id.value(), product, quantity, economy::GoodsFlowKind::Production))
+                throw std::runtime_error("production rejected");
+        } else {
+            if (stock > std::numeric_limits<int>::max() - quantity) throw std::overflow_error("stock overflow");
+            stock += quantity;
+        }
+    }
+
     // 製品名の設定（空文字列チェック）
     void setProduct(const std::string& prod) {
         if (prod.empty()) {
@@ -54,6 +69,7 @@ public:
         if (amount < 0) {
             throw std::invalid_argument("Stock cannot be negative");
         }
+        if (runtime_goods) throw std::logic_error("bound inventory uses commands");
         stock = amount;
     }
     
@@ -104,15 +120,16 @@ public:
         }
         
         // オーバーフローチェック
-        if (stock > std::numeric_limits<int32_t>::max() - daily_production) {
+        if (!runtime_goods && stock > std::numeric_limits<int32_t>::max() - daily_production) {
             throw std::overflow_error("Production would cause stock overflow");
         }
         
-        stock += daily_production;
+        produceGoods(daily_production);
     }
     
     // 販売処理
     void sell(int32_t quantity) {
+        if (runtime_goods) throw std::logic_error("bound sales require market counterparty");
         if (quantity <= 0) {
             throw std::invalid_argument("Quantity to sell must be positive");
         }

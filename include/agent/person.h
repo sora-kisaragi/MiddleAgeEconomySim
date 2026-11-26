@@ -86,11 +86,16 @@ struct Person : public Agent {
         if (item.empty()) {
             throw std::invalid_argument("Cannot add empty item to inventory");
         }
+        if (runtime_goods) throw std::logic_error("bound inventory requires source command");
         inventory.push_back(item);
     }
     
     // アイテムの安全な削除
     bool removeInventoryItem(const std::string& item) {
+        if (runtime_goods) {
+            if (runtime_goods->balance(id.value(), item) == 0) return false;
+            return runtime_goods->move(id.value(), item, 1, economy::GoodsFlowKind::Consumption);
+        }
         auto it = std::find(inventory.begin(), inventory.end(), item);
         if (it != inventory.end()) {
             inventory.erase(it);

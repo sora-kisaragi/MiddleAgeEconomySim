@@ -121,6 +121,31 @@ int main(int argc, char* argv[]) {
         businesses[1].id = actor_id("business:bakery");
     }
     
+    // Import once. Legacy stock/inventory remain initialization-only fields.
+    std::map<std::string, economy::ProductId> product_ids;
+    std::vector<std::string> product_names;
+    for (const auto& business : businesses) product_names.push_back(business.product);
+    for (const auto& person : people) for (const auto& item : person.inventory) product_names.push_back(item);
+    std::sort(product_names.begin(), product_names.end());
+    product_names.erase(std::unique(product_names.begin(), product_names.end()), product_names.end());
+    product_ids = economy::assignStableIds<economy::ProductTag>(product_names);
+    economy::GoodsSetup goods_setup;
+    for (const auto& row : product_ids) goods_setup.products.insert(row.second);
+    for (const auto& business : businesses) {
+        goods_setup.balances.emplace(std::make_pair(business.id.value(), product_ids.at(business.product)),
+                                     economy::Quantity(business.stock));
+    }
+    for (const auto& person : people) for (const auto& item : person.inventory) {
+        const auto key = std::make_pair(person.id.value(), product_ids.at(item));
+        auto it = goods_setup.balances.find(key);
+        const auto before = it == goods_setup.balances.end() ? economy::Quantity(0) : it->second;
+        goods_setup.balances.insert_or_assign(key, before.add(economy::Quantity(1)));
+    }
+    auto runtime_goods = std::make_shared<RuntimeGoods>(actor_registry, goods_setup, product_ids);
+    for (auto& business : businesses) { business.runtime_goods = runtime_goods; business.stock = 0; }
+    for (auto& person : people) { person.runtime_goods = runtime_goods; person.inventory.clear(); }
+    market.bindGoods(runtime_goods);
+
     std::cout << "=== 中世経済シミュレーション開始 ===\n";
     std::cout << "統合システム: 市場・政府・融資・貿易ルート\n\n";
     
@@ -148,6 +173,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "Day " << day << " の処理が完了しなかったため終了します。\n";
             return 1;
         }
+        if (!runtime_goods->audit()) throw std::logic_error("goods conservation audit failed");
         const auto observation = price_index.observe(market);
         if (csv_writer) csv_writer->writeDay(day, observation, total_money());
         if (timeline) timeline->completeDay(static_cast<std::uint64_t>(day));
