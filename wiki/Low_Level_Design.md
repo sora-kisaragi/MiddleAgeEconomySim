@@ -901,3 +901,24 @@ NPCの満足度は日次開始時に0〜100を検証します。公開フィー�
 `evaluateDecision` はポリシーを1回だけ呼び出し、返された `DecisionResponse` を既存の `CommandGateway::prepareOrder` へ渡して、候補ID・状態版・run ID・呼出者と支配者の権限を検証する。PASSではコマンドIDを発行せず、注文候補では保存済みの注文内容だけを `PreparedOrderCommand` に写す。不正応答はコマンドID発行より前に例外で拒否する。
 
 `DecisionResult` の `Passed` / `OrderPrepared` は判断段階の結果であり、確定済み取引や部分約定を意味しない。資金・商品の同時決済、処理済みCommandIdの照合、確定ジャーナル記録は#43/#47/#56と接続する後続作業である。現行の実CLIにはこの判断入口をまだ接続していないため、日次循環の受入条件は未達である。
+
+
+## 2026-11-27 商品台帳の実CLI接続（#45、移行中）
+
+CLI初期化で登録済みActorIdと安定キー順ProductIdへ期首在庫を一度だけ移し、
+RuntimeGoodsを家計・事業・市場に共有する。bound経路ではBusiness.stockと
+Person.inventoryは初期化用の旧フィールドとなり、残高として参照・同期しない。
+生産はProduction、購入はTransfer、消費はConsumptionとして共通確定入口を通す。
+加工はprocessで固定Recipeへ接続し、廃棄もmoveのDisposalを使用する。
+市場出品は商品別ActorId集合で、同一主体のコピーや再出品で重複しない。
+表示在庫は都度正本台帳から集計し、参照先オブジェクトの寿命には依存しない。
+
+購入は現金の範囲・相手・出品を事前検証し、商品確定後に例外を投げない整数代入で
+代金を移す。旧匿名sell/buyや相手在庫を動かさないdirectTradeはbound経路で拒否する。
+#47のQuote/部分成立や永続的な現金商品ジャーナルは実装済みとはしない。
+日末に期首と商品履歴から在庫を再計算し、不一致ではCLIを停止する。
+
+**残条件:** 公開simulateDayの未bound互換経路、旧Business/Personの直接操作APIには
+従来の在庫表現が残る。CLIの移行を旧経路を含む全体移行とは扱わず、#45全体の
+クローズ可判定は保留する。次は未bound呼出元と互換APIの移行方針を実装・検証し、
+旧正本を残したまま別のIssueへ移らない。#60との境界を確認する。
