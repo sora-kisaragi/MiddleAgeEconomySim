@@ -106,3 +106,26 @@ TEST_F(RegistryRuntimeTest, WrongInstitutionKindRejectedBeforeAnyMutation) {
 TEST_F(RegistryRuntimeTest, MissingInstitutionRejectedBeforeAnyMutation) {
     lender.id.reset(); expectUnchangedRejection();
 }
+
+TEST_F(RegistryRuntimeTest, DirectMarketRejectsForgedHouseholdIdentity) {
+    goods->beginDay();
+    for (const auto id : {government.id.value(), lender.id.value(), shop, ActorId(999)}) {
+        people[0].id = id;
+        EXPECT_FALSE(market.transact(&people[0], &businesses[0], "小麦", 1));
+        EXPECT_EQ(people[0].money, 100); EXPECT_EQ(businesses[0].money, 200);
+        EXPECT_EQ(goods->balance(owner, "小麦"), 2);
+        EXPECT_EQ(goods->balance(shop, "小麦"), 5);
+        EXPECT_TRUE(goods->history().empty());
+    }
+    people[0].id = owner;
+    ASSERT_TRUE(market.transact(&people[0], &businesses[0], "小麦", 1));
+    EXPECT_EQ(people[0].money, 95); EXPECT_EQ(businesses[0].money, 205);
+}
+TEST_F(RegistryRuntimeTest, DirectMarketRejectsClosedSellerWithoutAssetMutation) {
+    goods->beginDay(); registry.closeBusiness(shop);
+    EXPECT_FALSE(market.transact(&people[0], &businesses[0], "小麦", 1));
+    EXPECT_EQ(people[0].money, 100); EXPECT_EQ(businesses[0].money, 200);
+    EXPECT_EQ(goods->balance(owner, "小麦"), 2);
+    EXPECT_EQ(goods->balance(shop, "小麦"), 5);
+    EXPECT_TRUE(goods->history().empty());
+}

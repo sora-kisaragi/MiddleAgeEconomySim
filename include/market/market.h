@@ -104,6 +104,14 @@ public:
         if (runtime_goods) {
             if (buyer->runtime_goods != runtime_goods || seller->runtime_goods != runtime_goods ||
                 !buyer->id || !seller->id) return false;
+            try {
+                runtime_goods->validateActor(*buyer->id, economy::ActorKind::Person);
+                runtime_goods->validateActor(*seller->id, economy::ActorKind::Business);
+            } catch (const std::out_of_range&) {
+                return false;
+            } catch (const std::invalid_argument&) {
+                return false;
+            }
             const auto owners = ownership_listings.find(product);
             if (owners == ownership_listings.end() || !owners->second.count(*seller->id)) return false;
             auto quoted = price.find(product);
