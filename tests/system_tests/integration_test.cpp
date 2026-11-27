@@ -1,3 +1,5 @@
+#include "../owned_day_fixture.h"
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include <vector>
 #include "agent/person.h"
@@ -12,7 +14,7 @@ class EconomicSimulationIntegrationTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Initialize market
-        market = new Market();
+        market = new OwnedMarket();
         market->setPriceVolatility(0.1f);
         
         // Initialize government
@@ -80,7 +82,7 @@ protected:
         delete loan_provider;
     }
 
-    Market* market;
+    OwnedMarket* market;
     Government* government;
     LoanProvider* loan_provider;
     std::vector<Person> people;
@@ -88,7 +90,7 @@ protected:
     std::vector<TradeRoute> trade_routes;
 };
 
-TEST_F(EconomicSimulationIntegrationTest, BasicMarketOperations) {
+TEST_F(EconomicSimulationIntegrationTest, BasicOwnedMarketOperations) {
     // Register products in market
     market->registerProduct("小麦", 5);
     market->registerProduct("パン", 10);
@@ -163,64 +165,27 @@ TEST_F(EconomicSimulationIntegrationTest, AgentToAgentDirectTrade) {
     // Direct trade between agents
     bool trade_success = farmer.directTrade(&merchant, "tools", 2, 50);
     
-    EXPECT_TRUE(trade_success);
-    EXPECT_EQ(farmer.money, 100); // 200 - (2 * 50)
-    EXPECT_EQ(merchant.money, 400); // 300 + (2 * 50)
+    EXPECT_FALSE(trade_success);
+    EXPECT_EQ(farmer.money, 200);
+    EXPECT_EQ(merchant.money, 300);
 }
 
 TEST_F(EconomicSimulationIntegrationTest, MultipleAgentEconomicCycle) {
-    // Setup market
-    market->registerProduct("小麦", 5);
-    market->sell("小麦", 100, 5);
-    
-    // Record initial state
-    int total_money_before = 0;
-    for (const auto& person : people) {
-        total_money_before += person.money;
-    }
-    for (const auto& business : businesses) {
-        total_money_before += business.money;
-    }
-    total_money_before += government->money + loan_provider->money;
-    
-    // Simulate some economic activity
-    
-    // 1. Business production (adds value to economy)
-    for (auto& business : businesses) {
-        business.stock += business.daily_production;
-    }
-    
-    // 2. People earn income
-    for (auto& person : people) {
-        person.money += person.daily_income;
-    }
-    
-    // 3. Market transactions
-    for (auto& person : people) {
-        if (person.money >= 10 && market->getStock("小麦") > 0) {
-            try {
-                int cost = market->buy("小麦", 1);
-                person.money -= cost;
-            } catch (const std::exception&) {
-                // Transaction failed, continue
-            }
-        }
-    }
-    
-    // 4. Government tax collection
-    for (auto& person : people) {
-        if (person.money > 100) {
-            government->collectTax(&person);
-        }
-    }
-    
-    // Economy should still function after multiple operations
-    EXPECT_GT(market->getStock("小麦"), 0);
-    EXPECT_GT(government->money, 1000); // Should have collected some tax
-    
-    // Verify that people still have reasonable money amounts
-    for (const auto& person : people) {
-        EXPECT_GE(person.money, 0);
+    Market runtime;
+    const auto total = [&]() {
+        std::int64_t amount = government->money + loan_provider->money;
+        for (const auto& person : people) amount += person.money;
+        for (const auto& business : businesses) amount += business.money;
+        return amount;
+    };
+    const auto before = total();
+    ASSERT_TRUE(runOwnedDay(people,businesses,runtime,*government,*loan_provider,trade_routes));
+    EXPECT_EQ(total(),before);
+    EXPECT_GT(runtime.getStock("小麦"),0);
+    for(const auto& person:people) {
+        EXPECT_GE(person.money,0);
+        EXPECT_TRUE(person.runtime_goods->audit());
+        EXPECT_EQ(person.runtime_goods->balance(*person.id,"小麦"),0);
     }
 }
 
@@ -232,51 +197,23 @@ TEST_F(EconomicSimulationIntegrationTest, TradeRouteExistence) {
 }
 
 TEST_F(EconomicSimulationIntegrationTest, SystemStabilityAfterManyOperations) {
-    // Setup market
-    market->registerProduct("小麦", 5);
-    market->sell("小麦", 1000, 5);
-    
-    // Run many operations to test system stability
-    for (int day = 0; day < 10; ++day) {
-        // Daily production
-        for (auto& business : businesses) {
-            business.stock += business.daily_production;
-            market->sell(business.product, business.daily_production, business.price);
-        }
-        
-        // Daily income
-        for (auto& person : people) {
-            person.money += person.daily_income;
-        }
-        
-        // Market purchases
-        for (auto& person : people) {
-            if (person.money >= market->getPrice("小麦") && market->getStock("小麦") > 0) {
-                try {
-                    int cost = market->buy("小麦", 1);
-                    person.money -= cost;
-                } catch (const std::exception&) {
-                    // Skip if transaction fails
-                }
-            }
-        }
-        
-        // Government activities
-        for (auto& person : people) {
-            if (person.money > 100) {
-                government->collectTax(&person);
-            }
-        }
-        
-        // Verify system integrity each day
-        EXPECT_GT(market->getStock("小麦"), 0);
-        EXPECT_GT(government->money, 0);
-        for (const auto& person : people) {
-            EXPECT_GE(person.money, 0);
+    Market runtime;
+    const auto total = [&]() {
+        std::int64_t amount = government->money + loan_provider->money;
+        for(const auto& person:people) amount += person.money;
+        for(const auto& business:businesses) amount += business.money;
+        return amount;
+    };
+    const auto initial = total();
+    for(int day=0;day<10;++day) {
+        ASSERT_TRUE(runOwnedDay(people,businesses,runtime,*government,*loan_provider,trade_routes));
+        EXPECT_EQ(total(),initial);
+        EXPECT_GT(runtime.getStock("小麦"),0);
+        EXPECT_GE(government->money,0);
+        for(const auto& person:people) {
+            EXPECT_GE(person.money,0);
+            EXPECT_TRUE(person.runtime_goods->audit());
         }
     }
-    
-    // System should still be stable after 10 days
-    EXPECT_GT(government->money, 1000); // Should have collected taxes
-    EXPECT_LT(market->getPriceVolatility(), 1.0f); // Volatility should be reasonable
+    EXPECT_LT(runtime.getPriceVolatility(),1.0f);
 }

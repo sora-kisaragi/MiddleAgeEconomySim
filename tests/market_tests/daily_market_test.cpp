@@ -1,10 +1,11 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include <limits>
 #include "market/market.h"
 
 TEST(DailyMarketTest, SplitPurchases_EqualVolumes_EqualClosingPrices) {
-    Market single;
-    Market split;
+    OwnedMarket single;
+    OwnedMarket split;
     single.sell("grain", 100, 100);
     split.sell("grain", 40, 100);
     split.sell("grain", 60, 100);
@@ -20,7 +21,7 @@ TEST(DailyMarketTest, SplitPurchases_EqualVolumes_EqualClosingPrices) {
 }
 
 TEST(DailyMarketTest, Oversupply_UpdatesOnlyAtClose) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     market.buy("grain", 50);
     EXPECT_EQ(market.getPrice("grain"), 100);
@@ -29,7 +30,7 @@ TEST(DailyMarketTest, Oversupply_UpdatesOnlyAtClose) {
 }
 
 TEST(DailyMarketTest, UnfilledDemand_IncreasesClosingPrice) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     market.buy("grain", 100);
     EXPECT_THROW(market.buy("grain", 100), std::invalid_argument);
@@ -39,7 +40,7 @@ TEST(DailyMarketTest, UnfilledDemand_IncreasesClosingPrice) {
 }
 
 TEST(DailyMarketTest, CarryoverStock_IsIncludedInNextDaySupply) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     market.buy("grain", 50);
     market.clearDaily();
@@ -51,7 +52,7 @@ TEST(DailyMarketTest, CarryoverStock_IsIncludedInNextDaySupply) {
 }
 
 TEST(DailyMarketTest, ExplicitUpdate_RepeatedCalls_DoNotCompound) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     market.buy("grain", 50);
     market.updatePrice("grain");
@@ -63,7 +64,7 @@ TEST(DailyMarketTest, ExplicitUpdate_RepeatedCalls_DoNotCompound) {
 }
 
 TEST(DailyMarketTest, Products_HaveIndependentDailyTotals) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     market.sell("tools", 100, 200);
     market.buy("grain", 50);
@@ -74,14 +75,14 @@ TEST(DailyMarketTest, Products_HaveIndependentDailyTotals) {
 }
 
 TEST(DailyMarketTest, EmptyMarket_NoDemand_KeepsPrice) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 100);
 }
 
 TEST(DailyMarketTest, ZeroSupply_WithDemand_UsesSafeDenominator) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     EXPECT_THROW(market.buy("grain", 1), std::invalid_argument);
     market.clearDaily();
@@ -89,7 +90,7 @@ TEST(DailyMarketTest, ZeroSupply_WithDemand_UsesSafeDenominator) {
 }
 
 TEST(DailyMarketTest, SuccessiveDays_UsePreviousClosingPrice) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 100, 100);
     for (int expected_price : {110, 121}) {
         EXPECT_THROW(market.buy("grain", 200), std::invalid_argument);
@@ -99,7 +100,7 @@ TEST(DailyMarketTest, SuccessiveDays_UsePreviousClosingPrice) {
 }
 
 TEST(DailyMarketTest, ExtremeDemand_ClosingPriceIsBounded) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     EXPECT_THROW(market.buy("grain", std::numeric_limits<int>::max()), std::invalid_argument);
     market.clearDaily();
@@ -107,7 +108,7 @@ TEST(DailyMarketTest, ExtremeDemand_ClosingPriceIsBounded) {
 }
 
 TEST(DailyMarketTest, FailedFunding_DoesNotCreateDemand) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -120,7 +121,7 @@ TEST(DailyMarketTest, FailedFunding_DoesNotCreateDemand) {
 }
 
 TEST(DailyMarketTest, Transactions_UseOpeningPriceAndAccumulateDemand) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -132,13 +133,13 @@ TEST(DailyMarketTest, Transactions_UseOpeningPriceAndAccumulateDemand) {
     ASSERT_TRUE(market.transact(&buyer, &seller, "grain", 50));
     EXPECT_EQ(buyer.money, 0);
     EXPECT_EQ(seller.money, 10000);
-    EXPECT_EQ(seller.stock, 0);
+    EXPECT_EQ(seller.goodsStock(), 0);
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 100);
 }
 
 TEST(DailyMarketTest, Transaction_StockShortage_RecordsAffordableDemand) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -148,13 +149,13 @@ TEST(DailyMarketTest, Transaction_StockShortage_RecordsAffordableDemand) {
     market.sell("grain", 100, 100);
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 200));
     EXPECT_EQ(buyer.money, 20000);
-    EXPECT_EQ(seller.stock, 100);
+    EXPECT_EQ(seller.goodsStock(), 100);
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 110);
 }
 
 TEST(DailyMarketTest, Oversupply_PriceHasPositiveLowerBound) {
-    Market market;
+    OwnedMarket market;
     market.setPriceVolatility(2.0f);
     market.sell("grain", 100, 100);
     market.clearDaily();
@@ -162,8 +163,8 @@ TEST(DailyMarketTest, Oversupply_PriceHasPositiveLowerBound) {
 }
 
 TEST(DailyMarketTest, UnlistedSeller_SplitRequests_HaveEqualSupplyAndPrice) {
-    Market single;
-    Market split;
+    OwnedMarket single;
+    OwnedMarket split;
     Person single_buyer;
     Person split_buyer;
     single_buyer.money = split_buyer.money = 40000;
@@ -183,7 +184,7 @@ TEST(DailyMarketTest, UnlistedSeller_SplitRequests_HaveEqualSupplyAndPrice) {
 }
 
 TEST(DailyMarketTest, UnlistedSeller_RepeatedShortages_DoNotDuplicateSupply) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     buyer.money = 40000;
     Business seller;
@@ -198,7 +199,7 @@ TEST(DailyMarketTest, UnlistedSeller_RepeatedShortages_DoNotDuplicateSupply) {
 }
 
 TEST(DailyMarketTest, MultipleSellers_OfferDistinctSupplyAcrossDays) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     buyer.money = 40000;
     Business first;
@@ -217,7 +218,7 @@ TEST(DailyMarketTest, MultipleSellers_OfferDistinctSupplyAcrossDays) {
 }
 
 TEST(DailyMarketTest, PrelistedSupply_IsAssignedWithoutDoubleCounting) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 200, 100);
     Person buyer;
     buyer.money = 40000;
@@ -235,7 +236,7 @@ TEST(DailyMarketTest, PrelistedSupply_IsAssignedWithoutDoubleCounting) {
 }
 
 TEST(DailyMarketTest, Seller_SuccessThenShortage_DoesNotRelistSoldGoods) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     buyer.money = 40000;
     Business seller;
@@ -245,13 +246,13 @@ TEST(DailyMarketTest, Seller_SuccessThenShortage_DoesNotRelistSoldGoods) {
     ASSERT_TRUE(market.transact(&buyer, &seller, "grain", 50));
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 100));
     EXPECT_EQ(market.getStock("grain"), 50);
-    EXPECT_EQ(seller.stock, 50);
+    EXPECT_EQ(seller.goodsStock(), 50);
     market.clearDaily();
     EXPECT_EQ(market.getPrice("grain"), 105);
 }
 
-TEST(DailyMarketTest, AnonymousPurchase_ExhaustsMarket_DoesNotRegenerateListedGoods) {
-    Market market;
+TEST(DailyMarketTest, OwnerBackedPurchase_ExhaustsMarket_DoesNotRegenerateListedGoods) {
+    OwnedMarket market;
     Person buyer;
     buyer.money = 40000;
     Business seller;
@@ -266,8 +267,8 @@ TEST(DailyMarketTest, AnonymousPurchase_ExhaustsMarket_DoesNotRegenerateListedGo
     EXPECT_EQ(market.getPrice("grain"), 130);
 }
 
-TEST(DailyMarketTest, RegisterProduct_ResetsOnlyThatProductsSellerListings) {
-    Market market;
+TEST(DailyMarketTest, RegisterProduct_RepricingPreservesBothProductsOwnerInventory) {
+    OwnedMarket market;
     Person buyer;
     buyer.money = 40000;
     Business farmer;
@@ -282,7 +283,7 @@ TEST(DailyMarketTest, RegisterProduct_ResetsOnlyThatProductsSellerListings) {
     ASSERT_TRUE(market.transact(&buyer, &farmer, "grain", 25));
     ASSERT_TRUE(market.transact(&buyer, &artisan, "tools", 25));
     EXPECT_EQ(market.getStock("grain"), 25);
-    EXPECT_EQ(farmer.stock, 25);
+    EXPECT_EQ(farmer.goodsStock(), 25);
     EXPECT_EQ(market.getStock("tools"), 25);
-    EXPECT_EQ(artisan.stock, 25);
+    EXPECT_EQ(artisan.goodsStock(), 25);
 }

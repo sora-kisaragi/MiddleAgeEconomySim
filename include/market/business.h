@@ -45,15 +45,11 @@ public:
         return runtime_goods ? runtime_goods->balance(id.value(), product) : stock;
     }
     void produceGoods(int quantity) {
+        if (!runtime_goods) throw std::logic_error("production requires goods ledger");
         if (quantity < 0) throw std::invalid_argument("negative production");
         if (!quantity) return;
-        if (runtime_goods) {
-            if (!runtime_goods->move(id.value(), product, quantity, economy::GoodsFlowKind::Production))
-                throw std::runtime_error("production rejected");
-        } else {
-            if (stock > std::numeric_limits<int>::max() - quantity) throw std::overflow_error("stock overflow");
-            stock += quantity;
-        }
+        if (!runtime_goods->move(id.value(), product, quantity, economy::GoodsFlowKind::Production))
+            throw std::runtime_error("production rejected");
     }
 
     // 製品名の設定（空文字列チェック）
@@ -115,43 +111,19 @@ public:
     
     // 生産実行（在庫の更新）
     void produce() {
+        if (!runtime_goods) throw std::logic_error("production requires goods ledger");
         if (workers <= 0) {
             throw std::runtime_error("Cannot produce without workers");
-        }
-        
-        // オーバーフローチェック
-        if (!runtime_goods && stock > std::numeric_limits<int32_t>::max() - daily_production) {
-            throw std::overflow_error("Production would cause stock overflow");
         }
         
         produceGoods(daily_production);
     }
     
     // 販売処理
-    void sell(int32_t quantity) {
-        if (runtime_goods) throw std::logic_error("bound sales require market counterparty");
-        if (quantity <= 0) {
-            throw std::invalid_argument("Quantity to sell must be positive");
-        }
-        if (quantity > stock) {
-            throw std::runtime_error("Not enough stock to sell");
-        }
-        
-        if (price < 0) {
-            throw std::invalid_argument("Price cannot be negative");
-        }
-        if (price > std::numeric_limits<int64_t>::max() / quantity) {
-            throw std::overflow_error("Sale would cause revenue overflow");
-        }
-        const int64_t revenue = static_cast<int64_t>(quantity) * price;
-        if (money > std::numeric_limits<int64_t>::max() - revenue) {
-            throw std::overflow_error("Sale would cause money overflow");
-        }
-        
-        stock -= quantity;
-        addMoney(revenue);  // Agent::addMoneyを使用（既存のオーバーフロー保護付き）
+    void sell(int32_t) {
+        throw std::logic_error("sale requires registered counterparty through Market::transact");
     }
-    
+
     // 従業員の給与支払い
     void payWorkers(int64_t per_worker_salary) {
         if (per_worker_salary <= 0) {

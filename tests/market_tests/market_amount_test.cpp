@@ -1,10 +1,11 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include <limits>
 #include "market/market.h"
 
 TEST(MarketAmountTest, Buy_UnrepresentableCost_LeavesStockAndPriceUnchanged) {
-    Market market;
-    Market control;
+    OwnedMarket market;
+    OwnedMarket control;
     market.sell("grain", 2, std::numeric_limits<int>::max());
     control.sell("grain", 2, std::numeric_limits<int>::max());
     EXPECT_THROW(market.buy("grain", 2), std::overflow_error);
@@ -16,7 +17,7 @@ TEST(MarketAmountTest, Buy_UnrepresentableCost_LeavesStockAndPriceUnchanged) {
 }
 
 TEST(MarketAmountTest, Transact_Uses64BitCost) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -27,12 +28,12 @@ TEST(MarketAmountTest, Transact_Uses64BitCost) {
     ASSERT_TRUE(market.transact(&buyer, &seller, "grain", 2));
     EXPECT_EQ(buyer.money, 0);
     EXPECT_EQ(seller.money, cost);
-    EXPECT_EQ(seller.stock, 0);
+    EXPECT_EQ(seller.goodsStock(), 0);
     EXPECT_EQ(market.getStock("grain"), 0);
 }
 
 TEST(MarketAmountTest, Transact_RecipientOverflow_DoesNotChangeBalancesOrMarket) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -43,13 +44,13 @@ TEST(MarketAmountTest, Transact_RecipientOverflow_DoesNotChangeBalancesOrMarket)
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 1));
     EXPECT_EQ(buyer.money, 100);
     EXPECT_EQ(seller.money, std::numeric_limits<int64_t>::max());
-    EXPECT_EQ(seller.stock, 1);
+    EXPECT_EQ(seller.goodsStock(), 1);
     EXPECT_EQ(market.getPrice("grain"), 0);
     EXPECT_EQ(market.getStock("grain"), 0);
 }
 
 TEST(MarketAmountTest, Transact_UnrepresentableSellerPrice_IsRejected) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     Business seller;
     seller.product = "grain";
@@ -58,11 +59,11 @@ TEST(MarketAmountTest, Transact_UnrepresentableSellerPrice_IsRejected) {
     seller.price = static_cast<int64_t>(std::numeric_limits<int>::max()) + 1;
     EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 1));
     EXPECT_EQ(market.getPrice("grain"), 0);
-    EXPECT_EQ(seller.stock, 1);
+    EXPECT_EQ(seller.goodsStock(), 1);
 }
 
 TEST(MarketAmountTest, Sell_InvalidQuantityOrPrice_IsRejectedWithoutMutation) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 10, 100);
     for (int quantity : {0, -1}) {
         EXPECT_FALSE(market.sell("grain", quantity, 100));
@@ -76,14 +77,14 @@ TEST(MarketAmountTest, Sell_InvalidQuantityOrPrice_IsRejectedWithoutMutation) {
 }
 
 TEST(MarketAmountTest, Sell_StockOverflow_IsRejectedWithoutMutation) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", std::numeric_limits<int>::max(), 100);
     EXPECT_FALSE(market.sell("grain", 1, 100));
     EXPECT_EQ(market.getStock("grain"), std::numeric_limits<int>::max());
 }
 
 TEST(MarketAmountTest, RegisterProduct_InvalidPrice_PreservesExistingProduct) {
-    Market market;
+    OwnedMarket market;
     market.sell("grain", 10, 100);
     for (int price : {0, -1}) {
         EXPECT_THROW(market.registerProduct("grain", price), std::invalid_argument);
@@ -93,7 +94,7 @@ TEST(MarketAmountTest, RegisterProduct_InvalidPrice_PreservesExistingProduct) {
 }
 
 TEST(MarketAmountTest, MultipleSellerOffers_StockOverflow_IsRejected) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     buyer.money = std::numeric_limits<int64_t>::max();
     Business first;

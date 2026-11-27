@@ -77,19 +77,19 @@ TEST(AgentTransferTest, DirectTrade_OverflowingTotal_IsRejected) {
     EXPECT_EQ(seller.money, 0);
 }
 
-TEST(AgentTransferTest, DirectTrade_MaximumRepresentableTotal_Succeeds) {
+TEST(AgentTransferTest, DirectTrade_MaximumTotalStillRequiresGoodsOwnership) {
     Agent buyer;
     Agent seller;
     buyer.money = std::numeric_limits<int64_t>::max();
-    EXPECT_TRUE(buyer.directTrade(&seller, "grain", 1, buyer.money));
-    EXPECT_EQ(buyer.money, 0);
-    EXPECT_EQ(seller.money, std::numeric_limits<int64_t>::max());
+    EXPECT_FALSE(buyer.directTrade(&seller, "grain", 1, buyer.money));
+    EXPECT_EQ(buyer.money, std::numeric_limits<int64_t>::max());
+    EXPECT_EQ(seller.money, 0);
 }
 
 TEST(AgentTransferTest, ZeroCostTradeAndService_PreserveBalances) {
     Agent buyer;
     Agent seller;
-    EXPECT_TRUE(buyer.directTrade(&seller, "grain", 1, 0));
+    EXPECT_FALSE(buyer.directTrade(&seller, "grain", 1, 0));
     EXPECT_TRUE(seller.provideService(&buyer, "advice", 0));
     EXPECT_EQ(buyer.money, 0);
     EXPECT_EQ(seller.money, 0);

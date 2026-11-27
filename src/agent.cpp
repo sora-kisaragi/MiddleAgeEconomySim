@@ -14,16 +14,9 @@ bool Agent::transferMoneyTo(Agent* recipient, int64_t amount) {
 }
 
 bool Agent::directTrade(Agent* other, const std::string& item, int quantity, int64_t price) {
-    if (runtime_goods || (other && other->runtime_goods)) return false;
-    if (!canInteractWith(other) || quantity <= 0 || price < 0 ||
-        price > std::numeric_limits<int64_t>::max() / quantity) {
-        return false;
-    }
-    const int64_t total_cost = price * quantity;
-    if (!transferMoneyTo(other, total_cost)) return false;
-    std::cout << "Direct trade completed: " << item << " (" << quantity
-              << " units) for " << total_cost << " coins" << std::endl;
-    return true;
+    (void)other; (void)item; (void)quantity; (void)price;
+    // The old operation moved cash without establishing goods ownership.
+    return false;
 }
 
 bool Agent::requestLoan(Agent* lender, int64_t amount, float interest_rate) {
