@@ -100,3 +100,122 @@ TEST(RuntimeGoodsTest, ProcessingAndFailedPurchasePreserveOwnerBalancesAndCash) 
     Business fake = seller; fake.id = owner;
     EXPECT_THROW(market.listOwner(fake), std::invalid_argument);
 }
+
+TEST(RuntimeGoodsTest, RetiredUnboundExecutionCannotMutateGoodsOrCash) {
+    EXPECT_THROW((RuntimeGoods(std::shared_ptr<const economy::ActorRegistry>{},
+        economy::GoodsSetup{}, std::map<std::string,economy::ProductId>{})), std::invalid_argument);
+    Market market;
+    Person person; person.money=100; person.inventory={"小麦"};
+    Business business; business.product="小麦"; business.price=5;
+    business.stock=10; business.workers=1; business.daily_production=2;
+    EXPECT_FALSE(market.sell("小麦",10,5));
+    EXPECT_THROW(market.buy("小麦",1),std::logic_error);
+    EXPECT_FALSE(market.transact(&person,&business,"小麦",1));
+    EXPECT_THROW(business.produce(),std::logic_error);
+    EXPECT_THROW(business.sell(1),std::logic_error);
+    EXPECT_FALSE(person.directTrade(&business,"小麦",1,5));
+    std::vector<Person> people{person}; std::vector<Business> businesses{business};
+    Government government; LoanProvider lender; std::vector<TradeRoute> routes;
+    EXPECT_FALSE(simulateDay(people,businesses,market,government,lender,routes));
+    EXPECT_EQ(people[0].money,100); EXPECT_EQ(businesses[0].money,0);
+    EXPECT_EQ(businesses[0].stock,10);
+    EXPECT_EQ(people[0].inventory,(std::vector<std::string>{"小麦"}));
+    EXPECT_EQ(market.getStock("小麦"),0);
+}
+
+TEST(RuntimeGoodsTest, RecipientOverflowRollsBackMarketCashAndBothOwners) {
+    auto registry=std::make_shared<economy::ActorRegistry>(economy::ActorRegistry::fromSpecs({
+        {"buyer","buyer",economy::ActorKind::Person},
+        {"seller","seller",economy::ActorKind::Business,"buyer"},
+        {"government","government",economy::ActorKind::Government},
+        {"lender","lender",economy::ActorKind::Lender}}));
+    const auto buyerId=registry->actorByKey("buyer").id;
+    const auto sellerId=registry->actorByKey("seller").id;
+    economy::ProductId wheat(1); economy::GoodsSetup setup;
+    setup.products={wheat};
+    setup.balances.emplace(std::make_pair(buyerId,wheat),economy::Quantity(std::numeric_limits<std::int64_t>::max()));
+    setup.balances.emplace(std::make_pair(sellerId,wheat),economy::Quantity(5));
+    auto goods=std::make_shared<RuntimeGoods>(registry,setup,
+        std::map<std::string,economy::ProductId>{{"小麦",wheat}});
+    goods->beginDay();
+    Person buyer; buyer.id=buyerId; buyer.runtime_goods=goods; buyer.money=100;
+    Business seller; seller.id=sellerId; seller.product="小麦"; seller.runtime_goods=goods;
+    Market market; market.bindGoods(goods); market.registerProduct("小麦",10); market.listOwner(seller);
+    ASSERT_FALSE(market.transact(&buyer,&seller,"小麦",1));
+    EXPECT_EQ(buyer.money,100); EXPECT_EQ(seller.money,0);
+    EXPECT_EQ(seller.goodsStock(),5); EXPECT_EQ(market.getStock("小麦"),5);
+    EXPECT_EQ(goods->balance(buyerId,"小麦"),std::numeric_limits<std::int64_t>::max());
+    EXPECT_TRUE(goods->history().empty()); EXPECT_TRUE(goods->audit());
+}
+
+TEST(RuntimeGoodsTest, InvalidNameBindingsCannotAliasOwnedProducts) {
+    auto registry=std::make_shared<economy::ActorRegistry>(economy::ActorRegistry::fromSpecs({
+        {"buyer","buyer",economy::ActorKind::Person},
+        {"seller","seller",economy::ActorKind::Business,"buyer"},
+        {"government","government",economy::ActorKind::Government},
+        {"lender","lender",economy::ActorKind::Lender}}));
+    economy::GoodsSetup setup;
+    const economy::ProductId grain(1),bread(2);
+    setup.products={grain,bread};
+    setup.balances.emplace(std::make_pair(registry->actorByKey("seller").id,grain),economy::Quantity(5));
+    for(const auto& names:std::vector<std::map<std::string,economy::ProductId>>{
+        {{"grain",grain},{"bread",grain}}, {{"",grain},{"bread",bread}},
+        {{"grain",grain},{"bread",economy::ProductId(3)}}, {{"grain",grain}}}) {
+        EXPECT_THROW((RuntimeGoods(registry,setup,names)),std::invalid_argument);
+        EXPECT_THROW((RuntimeGoods(*registry,setup,names)),std::invalid_argument);
+    }
+    EXPECT_NO_THROW((RuntimeGoods(registry,setup,{{"grain",grain},{"bread",bread}})));
+}
+
+TEST(RuntimeGoodsTest, BoundMarketValidatesInvalidInputsWithoutFixturePrechecks) {
+    auto registry=std::make_shared<economy::ActorRegistry>(economy::ActorRegistry::fromSpecs({
+        {"buyer","buyer",economy::ActorKind::Person},
+        {"seller","seller",economy::ActorKind::Business,"buyer"},
+        {"government","government",economy::ActorKind::Government},
+        {"lender","lender",economy::ActorKind::Lender}}));
+    const auto buyerId=registry->actorByKey("buyer").id;
+    const auto sellerId=registry->actorByKey("seller").id;
+    const economy::ProductId grain(1);
+    economy::GoodsSetup setup;
+    setup.products={grain}; setup.balances.emplace(std::make_pair(sellerId,grain),economy::Quantity(5));
+    auto goods=std::make_shared<RuntimeGoods>(registry,setup,
+        std::map<std::string,economy::ProductId>{{"grain",grain}});
+    goods->beginDay();
+    Person buyer; buyer.id=buyerId; buyer.runtime_goods=goods; buyer.money=100;
+    Business seller; seller.id=sellerId; seller.runtime_goods=goods; seller.product="grain";
+    Market market; market.bindGoods(goods); market.registerProduct("grain",10); market.listOwner(seller);
+    const auto unchanged = [&]() {
+        EXPECT_EQ(goods->balance(sellerId,"grain"),5);
+        EXPECT_EQ(goods->balance(buyerId,"grain"),0);
+        EXPECT_EQ(seller.money,0); EXPECT_EQ(buyer.money,100);
+        EXPECT_TRUE(goods->history().empty()); EXPECT_TRUE(goods->audit());
+    };
+    for(int quantity:{0,-1}) {
+        EXPECT_FALSE(market.transact(&buyer,&seller,"grain",quantity)); unchanged();
+    }
+    EXPECT_FALSE(market.transact(nullptr,&seller,"grain",1)); unchanged();
+    EXPECT_FALSE(market.transact(&buyer,nullptr,"grain",1)); unchanged();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"bread",1)); unchanged();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"",1)); unchanged();
+    buyer.money=9;
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1)); EXPECT_EQ(buyer.money,9);
+    buyer.money=-1;
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1)); EXPECT_EQ(buyer.money,-1);
+    buyer.money=100; seller.money=-1;
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1)); EXPECT_EQ(seller.money,-1);
+    seller.money=std::numeric_limits<std::int64_t>::max();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1));
+    EXPECT_EQ(seller.money,std::numeric_limits<std::int64_t>::max());
+    seller.money=0; unchanged();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",6)); unchanged();
+    buyer.id.reset();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1)); buyer.id=buyerId; unchanged();
+    buyer.runtime_goods.reset();
+    EXPECT_FALSE(market.transact(&buyer,&seller,"grain",1)); buyer.runtime_goods=goods; unchanged();
+    Market unlisted; unlisted.bindGoods(goods); unlisted.registerProduct("grain",10);
+    EXPECT_FALSE(unlisted.transact(&buyer,&seller,"grain",1)); unchanged();
+    ASSERT_TRUE(market.transact(&buyer,&seller,"grain",1));
+    EXPECT_EQ(buyer.money,90); EXPECT_EQ(seller.money,10);
+    EXPECT_EQ(goods->balance(buyerId,"grain"),1); EXPECT_EQ(goods->balance(sellerId,"grain"),4);
+    EXPECT_TRUE(goods->audit());
+}

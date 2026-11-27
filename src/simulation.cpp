@@ -14,6 +14,13 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     }
     
     try {
+        if (!market.hasGoodsLedger()) throw std::logic_error("simulation requires bound goods ledger");
+        for (const auto& person : people) {
+            if (!market.usesGoods(person.runtime_goods) || !person.id) throw std::logic_error("unbound household");
+        }
+        for (const auto& business : businesses) {
+            if (!market.usesGoods(business.runtime_goods) || !business.id) throw std::logic_error("unbound business");
+        }
         for (const auto& person : people) {
             if (person.satisfaction < 0 || person.satisfaction > 100) {
                 throw std::invalid_argument("NPC satisfaction must be between 0 and 100");
@@ -66,10 +73,7 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
             const int quoted_price = market.getPrice(business.product);
             market.registerProduct(business.product, quoted_price > 0 ? quoted_price : static_cast<int>(business.price));
         }
-        if (market.hasGoodsLedger()) { market.listOwner(business); }
-        else if (business.goodsStock() > 0 && !market.sell(business.product, business.goodsStock(), static_cast<int>(business.price))) {
-            throw std::overflow_error("Cannot list business inventory");
-        }
+        market.listOwner(business);
         std::cout << business.product << "が" << business.goodsStock() << "個、"
                   << market.getPrice(business.product) << "コインで市場に出品されました。\n";
     }
@@ -118,7 +122,7 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
                 }
                 const int cost = market.getPrice(food);
                 if (seller != businesses.end() && market.transact(&person, &*seller, food, 1)) {
-                    if (!person.runtime_goods) person.inventory.push_back(food);
+
                     std::cout << person.name << "が" << food << "を" << cost << "コインで購入しました。\n";
                 }
             }

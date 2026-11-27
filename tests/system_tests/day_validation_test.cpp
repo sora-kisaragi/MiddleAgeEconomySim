@@ -1,3 +1,4 @@
+#include "../owned_day_fixture.h"
 #include <gtest/gtest.h>
 #include <limits>
 #include "system/simulation.h"
@@ -22,13 +23,13 @@ protected:
     void expectRejectedWithoutMutation() {
         const auto original = businesses;
         const int64_t person_cash = people[0].money;
-        EXPECT_FALSE(simulateDay(people, businesses, market, government, lender, routes));
+        EXPECT_FALSE(runOwnedDay(people, businesses, market, government, lender, routes));
         for (size_t i = 0; i < businesses.size(); ++i) {
             EXPECT_EQ(businesses[i].stock, original[i].stock);
             EXPECT_EQ(businesses[i].money, original[i].money);
         }
         EXPECT_EQ(people[0].money, person_cash);
-        EXPECT_EQ(market.getStock("小麦"), 6);
+        EXPECT_EQ(market.getStock("小麦"), 0); // Anonymous setup no longer creates inventory.
         EXPECT_EQ(market.getPrice("小麦"), 12);
     }
     std::vector<Person> people;
@@ -67,14 +68,14 @@ TEST_F(DayValidationTest, EmptyProduct_IsRejectedBeforeMutation) {
 }
 
 TEST_F(DayValidationTest, ValidDay_ReturnsSuccess) {
-    EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+    EXPECT_TRUE(runOwnedDay(people, businesses, market, government, lender, routes));
 }
 TEST_F(DayValidationTest, EmptyAgents_ReturnFailure) {
     people.clear();
-    EXPECT_FALSE(simulateDay(people, businesses, market, government, lender, routes));
+    EXPECT_FALSE(runOwnedDay(people, businesses, market, government, lender, routes));
     people.resize(1);
     businesses.clear();
-    EXPECT_FALSE(simulateDay(people, businesses, market, government, lender, routes));
+    EXPECT_FALSE(runOwnedDay(people, businesses, market, government, lender, routes));
 }
 TEST_F(DayValidationTest, OutOfRangePrice_IsRejectedBeforeMutation) {
     businesses[1].price = static_cast<int64_t>(std::numeric_limits<int>::max()) + 1;
@@ -83,7 +84,7 @@ TEST_F(DayValidationTest, OutOfRangePrice_IsRejectedBeforeMutation) {
 TEST_F(DayValidationTest, MaximumAggregateStock_IsAccepted) {
     businesses[0].stock = std::numeric_limits<int>::max() - 7;
     businesses[0].daily_production = 2;
-    EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+    EXPECT_TRUE(runOwnedDay(people, businesses, market, government, lender, routes));
     EXPECT_EQ(market.getStock("小麦"), std::numeric_limits<int>::max() - 1);
 }
 
@@ -100,7 +101,7 @@ TEST_F(DayValidationTest, ValidNpcSatisfactionEndpoints_RemainWithinRange) {
     for (int endpoint : {0, 100}) {
         people[0].satisfaction = endpoint;
         people[0].money = 0;
-        EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+        EXPECT_TRUE(runOwnedDay(people, businesses, market, government, lender, routes));
         EXPECT_EQ(people[0].satisfaction, std::max(0, endpoint - 5));
     }
 }
@@ -110,8 +111,11 @@ TEST_F(DayValidationTest, ValidNpcSatisfactionEndpoints_WithFoodRemainWithinRang
     for (int endpoint : {0, 100}) {
         people[0].satisfaction = endpoint;
         people[0].money = 0;
+        market = Market();
+        for(auto& p:people) p.runtime_goods.reset();
+        for(auto& b:businesses) b.runtime_goods.reset();
         people[0].inventory = {"小麦"};
-        EXPECT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
+        EXPECT_TRUE(runOwnedDay(people, businesses, market, government, lender, routes));
         EXPECT_EQ(people[0].satisfaction, std::min(100, endpoint + 10));
         EXPECT_TRUE(people[0].inventory.empty());
     }

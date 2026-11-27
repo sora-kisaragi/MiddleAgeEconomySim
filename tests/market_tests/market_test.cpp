@@ -1,3 +1,4 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include "market/market.h"
 #include "market/business.h"
@@ -6,7 +7,7 @@
 class MarketTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        market = new Market();
+        market = new OwnedMarket();
         seller = new Business();
         buyer = new Person();
         
@@ -27,7 +28,7 @@ protected:
         delete buyer;
     }
 
-    Market* market;
+    OwnedMarket* market;
     Business* seller;
     Person* buyer;
 };
@@ -40,8 +41,8 @@ TEST_F(MarketTest, GetPrice) {
 TEST_F(MarketTest, Buy_NonPositiveQuantity_ThrowsWithoutChangingState) {
     for (int quantity : {0, -1}) {
         SCOPED_TRACE(quantity);
-        Market tested_market;
-        Market control_market;
+        OwnedMarket tested_market;
+        OwnedMarket control_market;
         tested_market.sell("grain", 1000, 100);
         control_market.sell("grain", 1000, 100);
 
@@ -92,7 +93,7 @@ TEST_F(MarketTest, Transaction_Success) {
     EXPECT_TRUE(result);
     EXPECT_EQ(buyer->money, 1500 - (price * quantity));
     EXPECT_EQ(seller->money, 1000 + (price * quantity));
-    EXPECT_EQ(seller->stock, 490);
+    EXPECT_EQ(seller->goodsStock(), 490);
 }
 
 TEST_F(MarketTest, Transaction_InsufficientFunds) {
@@ -102,7 +103,7 @@ TEST_F(MarketTest, Transaction_InsufficientFunds) {
     EXPECT_FALSE(result);
     EXPECT_EQ(buyer->money, 50); // 変化なし
     EXPECT_EQ(seller->money, 1000); // 変化なし
-    EXPECT_EQ(seller->stock, 500); // 変化なし
+    EXPECT_EQ(seller->goodsStock(), 500); // 変化なし
 }
 
 TEST_F(MarketTest, Transaction_InsufficientStock) {
@@ -111,7 +112,7 @@ TEST_F(MarketTest, Transaction_InsufficientStock) {
     EXPECT_FALSE(result);
     EXPECT_EQ(buyer->money, 1500); // 変化なし
     EXPECT_EQ(seller->money, 1000); // 変化なし
-    EXPECT_EQ(seller->stock, 500); // 変化なし
+    EXPECT_EQ(seller->goodsStock(), 500); // 変化なし
 }
 
 TEST_F(MarketTest, PriceVolatility) {

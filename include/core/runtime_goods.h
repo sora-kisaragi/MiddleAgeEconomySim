@@ -5,10 +5,14 @@
 // binding they are not read as balances or synchronized as a second ledger.
 class RuntimeGoods {
 public:
+    RuntimeGoods(std::shared_ptr<const economy::ActorRegistry> registry, economy::GoodsSetup setup,
+                 std::map<std::string, economy::ProductId> products)
+        : registry_owner_(std::move(registry)), registry_(requireRegistry(registry_owner_)), products_(std::move(products)),
+          service_(registry_, {}, {}, setup), opening_(std::move(setup.balances)) { validateProducts(setup.products); }
     RuntimeGoods(const economy::ActorRegistry& registry, economy::GoodsSetup setup,
                  std::map<std::string, economy::ProductId> products)
         : registry_(registry), products_(std::move(products)),
-          service_(registry, {}, {}, setup), opening_(std::move(setup.balances)) {}
+          service_(registry, {}, {}, setup), opening_(std::move(setup.balances)) { validateProducts(setup.products); }
     bool isActiveBusiness(economy::ActorId actor) const {
         const auto& record = registry_.actor(actor);
         return record.active && record.kind == economy::ActorKind::Business;
@@ -57,6 +61,20 @@ public:
     }
     std::vector<economy::GoodsEntry> history() const { return service_.goodsHistory(); }
 private:
+    void validateProducts(const std::set<economy::ProductId>& catalog) const {
+        std::set<economy::ProductId> used;
+        for (const auto& row : products_) {
+            if (row.first.empty() || !catalog.count(row.second) || !used.insert(row.second).second)
+                throw std::invalid_argument("product names must uniquely cover catalog IDs");
+        }
+        if (used != catalog) throw std::invalid_argument("product catalog name missing");
+    }
+    static const economy::ActorRegistry& requireRegistry(
+            const std::shared_ptr<const economy::ActorRegistry>& registry) {
+        if (!registry) throw std::invalid_argument("goods registry must not be null");
+        return *registry;
+    }
+    std::shared_ptr<const economy::ActorRegistry> registry_owner_;
     const economy::ActorRegistry& registry_;
     std::map<std::string, economy::ProductId> products_;
     economy::SettlementService service_;

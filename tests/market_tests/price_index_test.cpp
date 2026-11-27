@@ -1,9 +1,10 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include <limits>
 #include "market/price_index.h"
 
 TEST(PriceIndexTest, ReferenceBasket_StartsAtOneHundred) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     PriceIndex index(market, {{"grain", 1}});
     const auto observation = index.observe(market);
@@ -12,7 +13,7 @@ TEST(PriceIndexTest, ReferenceBasket_StartsAtOneHundred) {
 }
 
 TEST(PriceIndexTest, FixedQuantities_WeightTheBasketValue) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     market.registerProduct("tools", 200);
     PriceIndex index(market, {{"grain", 2}, {"tools", 1}});
@@ -24,7 +25,7 @@ TEST(PriceIndexTest, FixedQuantities_WeightTheBasketValue) {
 }
 
 TEST(PriceIndexTest, DailyChange_UsesPreviousObservation) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     PriceIndex index(market, {{"grain", 1}});
     market.registerProduct("grain", 110);
@@ -36,7 +37,7 @@ TEST(PriceIndexTest, DailyChange_UsesPreviousObservation) {
 }
 
 TEST(PriceIndexTest, FallingPrices_ProduceNegativeDailyChange) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     PriceIndex index(market, {{"grain", 1}});
     market.registerProduct("grain", 90);
@@ -46,7 +47,7 @@ TEST(PriceIndexTest, FallingPrices_ProduceNegativeDailyChange) {
 }
 
 TEST(PriceIndexTest, UnrelatedProducts_DoNotChangeBasketOrReference) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     PriceIndex index(market, {{"grain", 1}});
     market.registerProduct("luxury", 100000);
@@ -54,7 +55,7 @@ TEST(PriceIndexTest, UnrelatedProducts_DoNotChangeBasketOrReference) {
 }
 
 TEST(PriceIndexTest, EmptyOrNonPositiveQuantities_AreRejected) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     EXPECT_THROW((PriceIndex(market, {})), std::invalid_argument);
     EXPECT_THROW((PriceIndex(market, {{"grain", 0}})), std::invalid_argument);
@@ -62,24 +63,24 @@ TEST(PriceIndexTest, EmptyOrNonPositiveQuantities_AreRejected) {
 }
 
 TEST(PriceIndexTest, MissingReferenceProduct_IsRejected) {
-    Market market;
+    OwnedMarket market;
     EXPECT_THROW((PriceIndex(market, {{"grain", 1}})), std::invalid_argument);
 }
 
 TEST(PriceIndexTest, FailedObservation_DoesNotAdvancePreviousIndex) {
-    Market market;
+    OwnedMarket market;
     market.registerProduct("grain", 100);
     PriceIndex index(market, {{"grain", 1}});
     market.registerProduct("grain", 110);
     index.observe(market);
-    Market incomplete;
+    OwnedMarket incomplete;
     EXPECT_THROW(index.observe(incomplete), std::invalid_argument);
     market.registerProduct("grain", 121);
     EXPECT_NEAR(index.observe(market).change_percent, 10.0, 1e-10);
 }
 
 TEST(PriceIndexTest, LargePricesAndQuantities_DoNotOverflowIntegerArithmetic) {
-    Market market;
+    OwnedMarket market;
     const int maximum = std::numeric_limits<int>::max();
     market.registerProduct("grain", maximum);
     market.registerProduct("tools", maximum);

@@ -1,9 +1,10 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include "market/market.h"
 
 TEST(ProductIdentityTest, WrongSellerProduct_PreservesCashStockAndDailyPrice) {
-    Market market;
-    Market control;
+    OwnedMarket market;
+    OwnedMarket control;
     for (auto* current : {&market, &control}) {
         current->sell("grain", 10, 100);
         current->sell("bread", 10, 50);
@@ -27,7 +28,7 @@ TEST(ProductIdentityTest, WrongSellerProduct_PreservesCashStockAndDailyPrice) {
 }
 TEST(ProductIdentityTest, MismatchedUnknownProduct_DoesNotRegisterOrListIt) {
     for (const std::string seller_product : {"bread", ""}) {
-        Market market;
+        OwnedMarket market;
         Person buyer;
         buyer.money = 1000;
         Business seller;
@@ -37,13 +38,13 @@ TEST(ProductIdentityTest, MismatchedUnknownProduct_DoesNotRegisterOrListIt) {
         EXPECT_FALSE(market.transact(&buyer, &seller, "grain", 1));
         EXPECT_EQ(market.getPrice("grain"), 0);
         EXPECT_EQ(market.getStock("grain"), 0);
-        EXPECT_EQ(seller.stock, 10);
+        EXPECT_EQ(seller.goodsStock(), 10);
         EXPECT_EQ(buyer.money, 1000);
         EXPECT_EQ(seller.money, 0);
     }
 }
 TEST(ProductIdentityTest, EmptyProductName_IsRejectedAtMarketEntries) {
-    Market market;
+    OwnedMarket market;
     EXPECT_THROW(market.registerProduct("", 100), std::invalid_argument);
     EXPECT_FALSE(market.sell("", 10, 100));
     Person buyer;
@@ -54,11 +55,11 @@ TEST(ProductIdentityTest, EmptyProductName_IsRejectedAtMarketEntries) {
     EXPECT_FALSE(market.transact(&buyer, &seller, "", 1));
     EXPECT_EQ(market.getPrice(""), 0);
     EXPECT_EQ(market.getStock(""), 0);
-    EXPECT_EQ(seller.stock, 10);
+    EXPECT_EQ(seller.goodsStock(), 10);
     EXPECT_EQ(buyer.money, 1000);
 }
 TEST(ProductIdentityTest, MatchingUnicodeProduct_TradesNormally) {
-    Market market;
+    OwnedMarket market;
     Person buyer;
     buyer.money = 100;
     Business seller;
@@ -68,6 +69,6 @@ TEST(ProductIdentityTest, MatchingUnicodeProduct_TradesNormally) {
     EXPECT_TRUE(market.transact(&buyer, &seller, "小麦", 2));
     EXPECT_EQ(buyer.money, 90);
     EXPECT_EQ(seller.money, 10);
-    EXPECT_EQ(seller.stock, 8);
+    EXPECT_EQ(seller.goodsStock(), 8);
     EXPECT_EQ(market.getStock("小麦"), 8);
 }

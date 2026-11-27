@@ -51,7 +51,8 @@ GoogleTest を用意できず、`g++-14` が使える場合は、既存の CLI �
 ```bash
 mkdir -p build-cli-only
 g++-14 -std=c++17 -Iinclude src/main.cpp src/agent.cpp src/simulation.cpp \
-  src/simulation_options.cpp -o build-cli-only/MiddleAgeEconomySim
+  src/simulation_options.cpp src/personality.cpp src/settlement_service.cpp \
+  -o build-cli-only/MiddleAgeEconomySim
 ```
 
 以下は標準ビルドの CLI 確認例です。ローカル GoogleTest を使った場合は `build_dir=build-local-gtest`、直接ビルドの場合は `build_dir=build-cli-only` に変更します。実行ファイルと CSV の出力先に同じディレクトリを使います。
@@ -90,3 +91,17 @@ build_dir=build
 - 建設的なフィードバックを心がける
 - 具体的な改善案を提示する
 - レビュー依頼から3営業日以内に返信する
+
+
+## 商品所有APIの移行（#45）
+
+日次処理の呼出元は、登録簿・商品カタログ・期首在庫からRuntimeGoodsを作成し、
+同じ台帳を人物・事業・市場へ接続してください。main.cppとRuntimeGoodsTestに実例が
+あります。公開simulateDayは未接続の旧処理へフォールバックしません。
+Business.stockとPerson.inventoryは初期設定専用であり、接続後の残高は
+Business.goodsStock/RuntimeGoods.balanceで照会します。生産・加工・移転・消費・廃棄は
+共通コマンドを使います。市場出品はlistOwner、売買は登録済み両主体のtransactです。
+匿名Market.sell/buy、Business.sell、Agent.directTradeは拒否のみを返します。
+旧成功テストの補助はtests/owned_market_fixture.h、実日次試験はowned_day_fixture.hで
+登録主体と実台帳を作ります。製品の境界検証はテスト補助を通さず製品APIを直接呼び、
+資金・双方の在庫・履歴の不変を確認してください。

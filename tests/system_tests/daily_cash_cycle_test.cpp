@@ -1,3 +1,4 @@
+#include "../owned_day_fixture.h"
 #include <gtest/gtest.h>
 #include "system/simulation.h"
 
@@ -25,7 +26,7 @@ protected:
         return total;
     }
 
-    void runDay() { simulateDay(people, businesses, market, government, lender, routes); }
+    void runDay() { runOwnedDay(people, businesses, market, government, lender, routes); }
 
     std::vector<Person> people;
     std::vector<Business> businesses;
@@ -57,7 +58,7 @@ TEST_F(DailyCashCycleTest, Purchase_CreditsSellerAndConsumesItsStock) {
     runDay();
     EXPECT_EQ(people[0].money, 95);
     EXPECT_EQ(businesses[0].money, 5);
-    EXPECT_EQ(businesses[0].stock, 9);
+    EXPECT_EQ(businesses[0].goodsStock(), 9);
     EXPECT_EQ(market.getStock("小麦"), 9);
 }
 
@@ -77,9 +78,9 @@ TEST_F(DailyCashCycleTest, Stock_CarriesOverWithoutDuplicateListings) {
     businesses[0].daily_production = 3;
     government.money = lender.money = 0;
     runDay();
-    EXPECT_EQ(businesses[0].stock, 9);
+    EXPECT_EQ(businesses[0].goodsStock(), 9);
     EXPECT_EQ(market.getStock("小麦"), 9);
     runDay();
-    EXPECT_EQ(businesses[0].stock, 11);
+    EXPECT_EQ(businesses[0].goodsStock(), 11);
     EXPECT_EQ(market.getStock("小麦"), 11);
 }

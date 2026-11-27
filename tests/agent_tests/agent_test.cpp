@@ -58,16 +58,16 @@ TEST(AgentTest, CanInteractWith) {
     EXPECT_FALSE(agent1.canInteractWith(nullptr)); // Can't interact with null
 }
 
-TEST(AgentTest, DirectTrade_Success) {
+TEST(AgentTest, DirectTrade_WithoutGoodsOwnership_IsRejected) {
     Agent agent1, agent2;
     agent1.money = 1000;
     agent2.money = 500;
     
     bool result = agent1.directTrade(&agent2, "grain", 10, 50);
     
-    EXPECT_TRUE(result);
-    EXPECT_EQ(agent1.money, 500); // 1000 - (10 * 50)
-    EXPECT_EQ(agent2.money, 1000); // 500 + (10 * 50)
+    EXPECT_FALSE(result);
+    EXPECT_EQ(agent1.money, 1000);
+    EXPECT_EQ(agent2.money, 500);
 }
 
 TEST(AgentTest, DirectTrade_InsufficientFunds) {

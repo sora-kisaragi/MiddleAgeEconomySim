@@ -1,3 +1,4 @@
+#include "../owned_market_fixture.h"
 #include <gtest/gtest.h>
 #include "../../include/market/business.h"
 #include <limits>
@@ -66,46 +67,20 @@ TEST(BusinessTest, SettersValidation) {
 }
 
 // 生産機能のテスト
-TEST(BusinessTest, Production) {
+TEST(BusinessTest, ProductionRequiresLedger) {
     Business business;
-    
-    // 従業員なしでの生産試行
-    EXPECT_THROW(business.produce(), std::runtime_error);
-    
-    // 正常な生産
-    business.setWorkers(5);
-    business.setDailyProduction(10);
-    EXPECT_NO_THROW(business.produce());
-    EXPECT_EQ(business.stock, 10);
-    
-    // 在庫最大値付近での生産（オーバーフロー防止）
-    business.setStock(std::numeric_limits<int32_t>::max() - 5);
-    business.setDailyProduction(10);
-    EXPECT_THROW(business.produce(), std::overflow_error);
+    business.workers = 5; business.daily_production = 10;
+    EXPECT_THROW(business.produce(), std::logic_error);
+    EXPECT_EQ(business.stock, 0);
 }
 
-// 販売機能のテスト
-TEST(BusinessTest, Sales) {
-    Business business;
-    business.setProduct("Test");
-    business.setStock(100);
-    business.setPrice(50);
-    
-    // 不正な数量での販売試行
-    EXPECT_THROW(business.sell(0), std::invalid_argument);
-    EXPECT_THROW(business.sell(-1), std::invalid_argument);
-    EXPECT_THROW(business.sell(101), std::runtime_error);
-    
-    // 正常な販売
-    EXPECT_NO_THROW(business.sell(50));
-    EXPECT_EQ(business.stock, 50);
-    EXPECT_EQ(business.money, 2500);  // 50 * 50
-    
-    // 大量販売時のオーバーフローチェック
-    Business large_business;
-    large_business.setStock(1000);
-    large_business.setPrice(std::numeric_limits<int64_t>::max() / 100);
-    EXPECT_THROW(large_business.sell(1000), std::overflow_error);
+TEST(BusinessTest, SaleRequiresCounterparty) {
+    Business business("Test",100,50,1,1,0.0f,0);
+    for (int quantity : {0,-1,50,101}) {
+        EXPECT_THROW(business.sell(quantity), std::logic_error);
+        EXPECT_EQ(business.stock,100);
+        EXPECT_EQ(business.money,0);
+    }
 }
 
 // 給与支払い機能のテスト
