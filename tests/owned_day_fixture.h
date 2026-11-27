@@ -48,6 +48,8 @@ inline bool runOwnedDay(std::vector<Person>& people, std::vector<Business>& busi
                 people[i].id=registry->actorByKey("person"+std::to_string(i)).id;
                 people[i].runtime_goods=goods; people[i].inventory.clear();
             }
+            government.id=registry->actorByKey("government").id;
+            lender.id=registry->actorByKey("lender").id;
             market.bindGoods(goods);
         }
         return simulateDay(people,businesses,market,government,lender,routes);

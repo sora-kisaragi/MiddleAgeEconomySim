@@ -31,6 +31,8 @@ TEST(RuntimeGoodsTest, ActualDailyPathOwnsGoodsAndListingsAreOnlyReferences) {
     EXPECT_EQ(market.getStock("小麦"), 5);
     EXPECT_EQ(business.goodsStock(), 5);
     Government government; LoanProvider lender; std::vector<TradeRoute> routes;
+    government.id = registry.actorByKey("government").id;
+    lender.id = registry.actorByKey("lender").id;
     for (int day = 0; day < 3; ++day) {
         ASSERT_TRUE(simulateDay(people, businesses, market, government, lender, routes));
         EXPECT_TRUE(goods->audit());
