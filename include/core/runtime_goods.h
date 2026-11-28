@@ -17,6 +17,13 @@ public:
         const auto& record = registry_.actor(actor);
         return record.active && record.kind == economy::ActorKind::Business;
     }
+    void validateActor(economy::ActorId actor, economy::ActorKind kind) const {
+        const auto& record = registry_.actor(actor);
+        if (!record.active || record.kind != kind ||
+            registry_.accountFor(actor).owner_actor_id != actor) {
+            throw std::invalid_argument("runtime actor kind, activity or account mismatch");
+        }
+    }
     void beginDay() { ++day_; sequence_ = 0; }
     std::int64_t balance(economy::ActorId actor, const std::string& product) const {
         return service_.goodsBalance(actor, products_.at(product)).value();

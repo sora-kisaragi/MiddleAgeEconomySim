@@ -15,12 +15,24 @@ bool simulateDay(std::vector<Person>& people, std::vector<Business>& businesses,
     
     try {
         if (!market.hasGoodsLedger()) throw std::logic_error("simulation requires bound goods ledger");
+        std::set<economy::ActorId> runtime_ids;
         for (const auto& person : people) {
             if (!market.usesGoods(person.runtime_goods) || !person.id) throw std::logic_error("unbound household");
+            person.runtime_goods->validateActor(*person.id, economy::ActorKind::Person);
+            if (!runtime_ids.insert(*person.id).second) throw std::invalid_argument("duplicate runtime actor");
         }
         for (const auto& business : businesses) {
             if (!market.usesGoods(business.runtime_goods) || !business.id) throw std::logic_error("unbound business");
+            business.runtime_goods->validateActor(*business.id, economy::ActorKind::Business);
+            if (!runtime_ids.insert(*business.id).second) throw std::invalid_argument("duplicate runtime actor");
         }
+        const auto validateInstitution = [&](const Agent& agent, economy::ActorKind kind) {
+            if (!agent.id) throw std::invalid_argument("unregistered institution");
+            people.front().runtime_goods->validateActor(*agent.id, kind);
+            if (!runtime_ids.insert(*agent.id).second) throw std::invalid_argument("duplicate institution actor");
+        };
+        validateInstitution(government, economy::ActorKind::Government);
+        validateInstitution(loan_provider, economy::ActorKind::Lender);
         for (const auto& person : people) {
             if (person.satisfaction < 0 || person.satisfaction > 100) {
                 throw std::invalid_argument("NPC satisfaction must be between 0 and 100");
